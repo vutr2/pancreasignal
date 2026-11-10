@@ -8,6 +8,7 @@ Why these steps?
 """
 from __future__ import annotations
 
+import numpy as np
 import pandas as pd
 
 
@@ -18,17 +19,31 @@ def normalize_by_creatinine(df: pd.DataFrame, biomarkers: list[str]) -> pd.DataF
     - Keep column names the same.
     - Leave non-biomarker columns untouched.
     """
-    raise NotImplementedError("TODO(Phase 2): implement normalize_by_creatinine")
+    result = df.copy()
+    for biomarker in biomarkers:
+        result[biomarker] = result[biomarker] / result["creatinine"]
+    return result
 
 
 def log_transform(df: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
     """Return a COPY of df with np.log1p applied to `columns`."""
-    raise NotImplementedError("TODO(Phase 2): implement log_transform")
+    result = df.copy()
+    # Fix: transform ONLY `columns`. The old version took every numeric column, so age
+    # (76 -> 4.34) and creatinine were silently log-transformed too.
+    result[columns] = np.log1p(result[columns])
+    return result
 
 
 def encode_sex(df: pd.DataFrame) -> pd.DataFrame:
     """Return a COPY of df where 'sex' ('M'/'F') becomes 1/0 (int)."""
-    raise NotImplementedError("TODO(Phase 2): implement encode_sex")
+    result = df.copy()
+    result["sex"] = result["sex"].map({"M": 1, "F": 0})
+    # .map() turns any value not in the dict ("m", "Male", NaN) into NaN without warning.
+    # Fail loudly instead: the API in Phase 6 will receive free-form input.
+    if result["sex"].isna().any():
+        bad = sorted(df.loc[result["sex"].isna(), "sex"].astype(str).unique())
+        raise ValueError(f"sex must be 'M' or 'F', got {bad}")
+    return result
 
 
 def build_features(df: pd.DataFrame, cfg: dict) -> pd.DataFrame:
@@ -45,4 +60,24 @@ def build_features(df: pd.DataFrame, cfg: dict) -> pd.DataFrame:
     (e.g. mean/std for scaling). Anything "fitted" must go inside the sklearn Pipeline in
     models/, so it is fitted on the training fold only.
     """
-    raise NotImplementedError("TODO(Phase 2): implement build_features")
+    features = cfg["features"]
+    biomarkers = features["biomarkers"]
+    demographics = features["demographics"]
+
+    # Fix: keep creatinine for now. Step 2 divides by it; selecting only
+    # biomarkers + demographics first would raise KeyError: 'creatinine'.
+    result = df[biomarkers + demographics + ["creatinine"]].copy()
+
+    # Fix: the flags live in cfg["features"], not at the top level of cfg. The old
+    # cfg.get("normalize_by_creatinine") always returned None, so both steps were skipped.
+    # Use [...] (not .get) for required keys: a missing/misspelled key then raises KeyError
+    # instead of silently turning the feature off.
+    if features["normalize_by_creatinine"]:
+        result = normalize_by_creatinine(result, biomarkers)
+    if features["log_transform"]:
+        # Order matters: log1p(biomarker / creatinine), not log1p(biomarker) / creatinine.
+        result = log_transform(result, biomarkers)
+    result = encode_sex(result)
+
+    # Drop creatinine here: fixed column order, only the model features.
+    return result[biomarkers + demographics]
