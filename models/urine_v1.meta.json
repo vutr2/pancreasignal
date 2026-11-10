@@ -1,6 +1,6 @@
 {
   "file": "urine_v1.joblib",
-  "sha256": "20139cf13c41b2e9cb58cd2926de4130709881815467abbc664b70b9079acf10",
+  "sha256": "d6a3309a65d4f79e3f2e24642bdba61fc943269efcf321ca8de56248e5bc6b41",
   "name": "urine_panel",
   "task": "pdac_vs_rest",
   "features": [
@@ -12,14 +12,14 @@
   ],
   "n_train": 590,
   "n_pdac": 199,
-  "trained_at": "2026-11-10T18:00:05+00:00",
+  "trained_at": "2026-11-10T18:06:15+00:00",
   "data_files_sha256": {
     "Debernardi et al 2020 data.csv": "74879b8ee6c0d95d36b92d44a39cc217bb920b7633346378979082046d726b89",
     "Debernardi et al 2020 documentation.csv": "d7784b95fe3ce53b35126ec92b5eb99449b3ff10179f33e28a1d310f6ff738d1"
   },
   "git": {
-    "commit": "dc886ab338b11f0c601ee17722bfead4b7f42975",
-    "uncommitted_changes": true
+    "commit": "ccd55759df0d173319cc35073596b295b426b6ce",
+    "uncommitted_changes": false
   },
   "python_version": "3.14.4",
   "sklearn_version": "1.9.1",
