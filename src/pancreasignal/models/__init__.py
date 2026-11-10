@@ -6,13 +6,21 @@ only ever sees the training fold. This is the main defense against data leakage.
 from __future__ import annotations
 
 from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
 
 
 def build_logreg(params: dict) -> Pipeline:
     """Pipeline: StandardScaler -> LogisticRegression(**params).
     The simplest strong baseline. Its coefficients are easy to explain in an interview.
     """
-    raise NotImplementedError("TODO(Phase 2): implement build_logreg")
+    return Pipeline(
+        [
+            ("scaler", StandardScaler()),
+            ("logreg", LogisticRegression(**params)),
+        ]
+    )
+    
 
 
 def build_xgboost(params: dict) -> Pipeline:

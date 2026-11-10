@@ -1,7 +1,10 @@
 """Experiment runner. (Done — wires your functions together.)
 
     python -m pancreasignal.train --config configs/urine.yaml
-    python -m pancreasignal.train --config configs/urine.yaml --task pdac_vs_control
+    python -m pancreasignal.train --config configs/urine.yaml --task pdac_vs_benign
+
+    # pdac_vs_control cannot use leave-one-center-out (all controls are from one center):
+    python -m pancreasignal.train --task pdac_vs_control --split stratified_kfold
 
 Outputs (in reports/):
     <run_id>_metrics.json   all metrics + config
@@ -32,7 +35,12 @@ def run(cfg: dict) -> dict:
     X = build_features(rows, cfg)
     splits = get_splits(rows, y, cfg)
     if not splits:
-        raise RuntimeError("No usable folds — check your split settings / data.")
+        raise RuntimeError(
+            f"No usable folds for task {cfg['task']!r} with split {cfg['evaluation']['split']!r} "
+            "(see the [LOCO] skip messages above). If no center has both classes, LOCO cannot "
+            "evaluate this task: rerun with --split stratified_kfold and report the result as "
+            "within-center, not cross-hospital."
+        )
 
     oof = pd.DataFrame({
         "sample_id": rows["sample_id"],
@@ -76,6 +84,8 @@ def main() -> None:
     ap.add_argument("--config", default="configs/urine.yaml")
     ap.add_argument("--task", help="override cfg['task']")
     ap.add_argument("--model", help="override cfg['model']['name']")
+    ap.add_argument("--split", choices=["leave_one_center_out", "stratified_kfold"],
+                    help="override cfg['evaluation']['split']")
     args = ap.parse_args()
 
     cfg = load_config(args.config)
@@ -83,6 +93,8 @@ def main() -> None:
         cfg["task"] = args.task
     if args.model:
         cfg["model"]["name"] = args.model
+    if args.split:
+        cfg["evaluation"]["split"] = args.split
 
     out = run(cfg)
     res = out["results"]
@@ -106,7 +118,7 @@ def main() -> None:
         pass
 
     m = res["model_all"]
-    print(f"\n{run_id}")
+    print(f"\n{run_id}  (split: {cfg['evaluation']['split']})")
     print(f"  model  AUROC {m['auroc']:.3f}  (95% CI {m['auroc_ci95'][0]:.3f}-{m['auroc_ci95'][1]:.3f})"
           f"  n={m['n']}  PDAC={m['n_pdac']}")
     if "ca199_baseline" in res:

@@ -6,6 +6,7 @@ data/*
 # experiment outputs
 mlruns/
 mlartifacts/
+mlflow.db
 reports/*
 !reports/.gitkeep
 *.joblib
