@@ -6,5 +6,13 @@
       "Debernardi et al 2020 data.csv": "74879b8ee6c0d95d36b92d44a39cc217bb920b7633346378979082046d726b89",
       "Debernardi et al 2020 documentation.csv": "d7784b95fe3ce53b35126ec92b5eb99449b3ff10179f33e28a1d310f6ff738d1"
     }
+  },
+  "mirna_gse59856": {
+    "source": "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE59nnn/GSE59856/matrix/GSE59856_series_matrix.txt.gz",
+    "downloaded_at": "2026-11-10T17:32:47.587783+00:00",
+    "files": {
+      "GPL18941.txt": "00aad3791d3be541a28e04893c4c28ba9eb2c94c414cb8999d55282299d8a01b",
+      "GSE59856_series_matrix.txt.gz": "6f7d2e1a1119960d94837680e276afd410238f9ae4be9b2fc236060ea1930fce"
+    }
   }
 }

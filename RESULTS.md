@@ -99,6 +99,43 @@ Only patients with a CA19-9 value (none at ESP or UCL; measured more often in PD
 | PDAC vs benign | 258 (150) | 0.780 (0.723–0.836) | 0.890 (0.847–0.928) | 0.26 | 0.73 |
 | PDAC vs rest | 350 (150) | 0.782 (0.732–0.830) | 0.923 (0.892–0.952) | 0.42 | 0.76 |
 
+## 8. Serum miRNA model (GSE59856, Phase 5)
+
+Different patients: 571 serum samples, 2555 miRNAs (Toray 3D-Gene array). No hospital information, so random stratified 5-fold. Elastic-net logistic regression with nested CV: the detection filter, scaling, and the choice of penalty all happen inside the training fold.
+
+### AUROC (95% CI)
+
+| Model | PDAC vs control (n=250) | PDAC vs biliary tract cancer (n=198) | PDAC vs benign (n=121) |
+|---|---|---|---|
+| Age + sex only (miRNA cohort) | 0.723 (0.645–0.794) | 0.498 (0.417–0.582) | 0.582 (0.439–0.725) |
+| Elastic-net on serum miRNA | 1.000 (1.000–1.000) | 0.520 (0.444–0.603) | 0.999 (0.995–1.000) |
+| miRNAs kept per fold (min–max) | 459–647 | 0–10 | 82–151 |
+| Sens @95% spec (miRNA) | 1.00 | 0.06 | 0.99 |
+
+### miRNA minus age + sex (paired, same samples)
+
+| Task | Difference (95% CI) |
+|---|---|
+| PDAC vs control | +0.277 (+0.206 to +0.355) |
+| PDAC vs biliary tract cancer | +0.022 (-0.090 to +0.139) |
+| PDAC vs benign | +0.417 (+0.275 to +0.560) |
+
+### Findings
+
+1. **Two tasks look perfect, one is at chance.** AUROC 1.000 for PDAC vs control and 0.999 for PDAC vs benign, but 0.520 for PDAC vs biliary tract cancer, where the inner CV kept no miRNA at all in 4 of 5 folds.
+2. **The perfect scores are probably not about cancer.** A single miRNA separates healthy controls from every other group, a PDAC-vs-control model calls most benign and other-cancer samples "PDAC", and even two batches of healthy controls can be told apart almost perfectly. The only groups that do not separate are pancreatic and biliary cancer, which seem to have been collected together. The most likely explanation is a collection or processing batch effect. Evidence: [notebooks/03_mirna.ipynb](notebooks/03_mirna.ipynb).
+3. **Age and sex alone** reach AUROC 0.723 for PDAC vs control (the controls are 91% male).
+4. **GEO quantile-normalised all 571 samples together** before release, so test samples influenced the normalisation of training samples. It uses no labels, but it is one more reason to read these numbers as optimistic.
+
+### Next to the urine model (NOT a fair comparison)
+
+| Task | Urine, logistic regression | Serum miRNA, elastic-net |
+|---|---|---|
+| PDAC vs control | 0.929 (random 5-fold) | 1.000 (random 5-fold) |
+| PDAC vs benign | 0.788 (leave-one-center-out) | 0.999 (random 5-fold) |
+
+Different patients, different collection, random split instead of leave-one-center-out, and a benign group of 21. A higher number here does not mean serum miRNA is the better test.
+
 ## Limitations
 
 - **Case-control data**, not a screening population: PDAC is 34% here, far below 1% in real screening.
@@ -110,6 +147,7 @@ Only patients with a CA19-9 value (none at ESP or UCL; measured more often in PD
 
 - Highest AUROC anywhere: 0.929 (> 0.97 would suggest leakage).
 - PDAC vs control (0.929) > PDAC vs benign (0.788), as expected (different splits, rough check only).
+- miRNA: highest AUROC 1.000, above 0.97, so it was investigated (section 8, notebook 03): no code leakage (shuffled labels give ~0.5), but a strong batch effect.
 
 ## Reproduce
 
@@ -122,11 +160,21 @@ for t in pdac_vs_benign pdac_vs_rest; do
   python -m pancreasignal.train --task $t --config configs/urine_age_only.yaml
 done
 # pdac_vs_control: same five commands with --split stratified_kfold
+for t in pdac_vs_control pdac_vs_biliary pdac_vs_benign; do
+  python -m pancreasignal.train --config configs/mirna.yaml --task $t
+  python -m pancreasignal.train --config configs/mirna_demographics.yaml --task $t
+done
 python scripts/make_results.py
 ```
 
 Runs used:
 
+- `reports/20261111-003835_pdac_vs_benign_elasticnet_mirna_metrics.json`
+- `reports/20261111-003843_pdac_vs_benign_elasticnet_mirna_demographics_metrics.json`
+- `reports/20261111-003813_pdac_vs_biliary_elasticnet_mirna_metrics.json`
+- `reports/20261111-003841_pdac_vs_biliary_elasticnet_mirna_demographics_metrics.json`
+- `reports/20261111-003655_pdac_vs_control_elasticnet_mirna_metrics.json`
+- `reports/20261111-003838_pdac_vs_control_elasticnet_mirna_demographics_metrics.json`
 - `reports/20261110-234837_pdac_vs_benign_logreg_age_only_metrics.json`
 - `reports/20261110-234828_pdac_vs_benign_logreg_urine_panel_metrics.json`
 - `reports/20261110-234831_pdac_vs_benign_logreg_urine_panel_calibrated_metrics.json`

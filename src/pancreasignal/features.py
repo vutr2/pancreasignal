@@ -85,3 +85,26 @@ def build_features(df: pd.DataFrame, cfg: dict) -> pd.DataFrame:
 
     # Drop creatinine here: fixed column order, only the model features.
     return result[biomarkers + demographics]
+
+
+def build_mirna_features(df: pd.DataFrame, cfg: dict) -> pd.DataFrame:
+    """Model matrix X for the serum miRNA data (Phase 5), driven by cfg['features'].
+
+    - features.mirna: true  -> all miRNA columns (already log2 + normalised by GEO, so no
+      creatinine and no extra log here)
+    - features.demographics -> e.g. [age, sex] for the demographics-only baseline
+
+    Nothing is filtered here on purpose: choosing miRNAs (by detection rate or by the labels)
+    must happen INSIDE the model Pipeline, on the training fold only. Selecting on the whole
+    dataset first is the classic p >> n leakage (see notebooks/03_mirna.ipynb).
+    """
+    features = cfg["features"]
+
+    # Step 1: miRNA columns (miRBase IDs start with MIMAT) if this feature set uses them
+    cols = [c for c in df.columns if str(c).startswith("MIMAT")] if features["mirna"] else []
+
+    # Step 2: add demographics; missing age stays NaN (the Pipeline's imputer fills it per fold)
+    result = df[cols + features["demographics"]].copy()
+    if "sex" in features["demographics"]:
+        result = encode_sex(result)
+    return result

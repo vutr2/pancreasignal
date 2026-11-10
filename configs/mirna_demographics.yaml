@@ -1,0 +1,18 @@
+# Baseline for the miRNA cohort: age + sex only, same model family and same splits.
+#
+# Why: in GSE59856 the healthy controls are 91% male (pancreatic cancer: 64%) and ~5 years
+# younger. A miRNA model must clearly beat what age and sex alone can do.
+#
+#   python -m pancreasignal.train --config configs/mirna_demographics.yaml --task pdac_vs_control
+
+base: mirna.yaml
+name: mirna_demographics
+
+features:
+  mirna: false
+  demographics: [age, sex]
+
+model:
+  params:
+    elasticnet:
+      min_detection_rate: 0.0    # keep both columns: age and sex are not miRNA signals

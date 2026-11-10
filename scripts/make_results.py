@@ -15,7 +15,15 @@ import pandas as pd
 
 from pancreasignal.config import PROJECT_ROOT
 from pancreasignal.evaluation.metrics import paired_bootstrap_auroc_diff
-from pancreasignal.reporting import TASKS, VARIANTS, get_run, load_runs, paired_oof
+from pancreasignal.reporting import (
+    MIRNA_TASKS,
+    MIRNA_VARIANTS,
+    TASKS,
+    VARIANTS,
+    get_run,
+    load_runs,
+    paired_oof,
+)
 
 LOCO_TASKS = ["pdac_vs_benign", "pdac_vs_rest"]
 CENTERS = ["BPTB", "LIV", "ESP"]  # the centers that can be a LOCO test fold
@@ -49,9 +57,93 @@ def replace_block(path, block: str) -> None:
     path.write_text(re.sub(pattern, lambda m: m.group(1) + block + m.group(2), text, flags=re.DOTALL))
 
 
+def mirna_sections(mruns: pd.DataFrame, urine_res) -> tuple[list[str], list[str]]:
+    """(lines for RESULTS.md, lines for README) about the serum miRNA model (Phase 5).
+    `urine_res(task, variant)` gives urine results for the side-by-side table."""
+    # Step 1: nothing to report if the miRNA model was never run
+    if mruns.empty:
+        return [], []
+    tasks = [t for t in MIRNA_TASKS if not mruns[mruns["task"] == t].empty]
+
+    def res(task: str, variant: str) -> dict:
+        return get_run(mruns, task, variant)["results"]
+
+    # Step 2: AUROC per task for the baseline and the miRNA model, and how many miRNAs each fold kept
+    rows = [[MIRNA_VARIANTS[v]] + [auc_ci(res(t, v)["model_all"]) for t in tasks] for v in MIRNA_VARIANTS]
+    kept = {t: [f["n_nonzero_coefs"] for f in res(t, "mirna")["per_fold"].values()] for t in tasks}
+    rows.append(["miRNAs kept per fold (min–max)"] + [f"{min(kept[t])}–{max(kept[t])}" for t in tasks])
+    rows.append(["Sens @95% spec (miRNA)"] + [f"{res(t, 'mirna')['model_all']['sens_at_spec95']:.2f}" for t in tasks])
+    auroc_table = table(["Model"] + [f"{MIRNA_TASKS[t]} (n={res(t, 'mirna')['model_all']['n']})" for t in tasks], rows)
+
+    # Step 3: paired difference miRNA - (age + sex) on the same samples
+    paired = []
+    for t in tasks:
+        m = paired_oof(mruns, t, "mirna", "mirna_demographics")
+        paired.append([MIRNA_TASKS[t], diff_ci(paired_bootstrap_auroc_diff(m.y, m.prob_a, m.prob_b))])
+
+    # Step 4: the findings, with numbers from the runs
+    auc = {t: res(t, "mirna")["model_all"]["auroc"] for t in tasks}
+    null_folds = sum(k == 0 for k in kept.get("pdac_vs_biliary", []))
+    findings = [
+        (f"1. **Two tasks look perfect, one is at chance.** AUROC {auc.get('pdac_vs_control', float('nan')):.3f} for "
+         f"PDAC vs control and {auc.get('pdac_vs_benign', float('nan')):.3f} for PDAC vs benign, but "
+         f"{auc.get('pdac_vs_biliary', float('nan')):.3f} for PDAC vs biliary tract cancer, where the inner CV kept "
+         f"no miRNA at all in {null_folds} of 5 folds."),
+        ("2. **The perfect scores are probably not about cancer.** A single miRNA separates healthy controls from "
+         "every other group, a PDAC-vs-control model calls most benign and other-cancer samples \"PDAC\", and even "
+         "two batches of healthy controls can be told apart almost perfectly. The only groups that do not separate "
+         "are pancreatic and biliary cancer, which seem to have been collected together. The most likely "
+         "explanation is a collection or processing batch effect. Evidence: "
+         "[notebooks/03_mirna.ipynb](notebooks/03_mirna.ipynb)."),
+        ("3. **Age and sex alone** reach AUROC "
+         f"{res('pdac_vs_control', 'mirna_demographics')['model_all']['auroc']:.3f} for PDAC vs control "
+         "(the controls are 91% male)."),
+        ("4. **GEO quantile-normalised all 571 samples together** before release, so test samples influenced the "
+         "normalisation of training samples. It uses no labels, but it is one more reason to read these numbers "
+         "as optimistic."),
+    ]
+
+    # Step 5: side by side with the urine model, with the reasons the numbers are NOT comparable
+    side = []
+    for t in ["pdac_vs_control", "pdac_vs_benign"]:
+        if t in tasks:
+            u = urine_res(t, "logreg")
+            side.append([TASKS[t], f"{u['model_all']['auroc']:.3f} ({SPLIT_LABEL[u['split']]})",
+                         f"{auc[t]:.3f} (random 5-fold)"])
+
+    results_lines = [
+        "", "## 8. Serum miRNA model (GSE59856, Phase 5)", "",
+        ("Different patients: 571 serum samples, 2555 miRNAs (Toray 3D-Gene array). No hospital information, so "
+         "random stratified 5-fold. Elastic-net logistic regression with nested CV: the detection filter, scaling, "
+         "and the choice of penalty all happen inside the training fold."), "",
+        "### AUROC (95% CI)", "", *auroc_table, "",
+        "### miRNA minus age + sex (paired, same samples)", "",
+        *table(["Task", "Difference (95% CI)"], paired), "",
+        "### Findings", "", *findings, "",
+        "### Next to the urine model (NOT a fair comparison)", "",
+        *table(["Task", "Urine, logistic regression", "Serum miRNA, elastic-net"], side), "",
+        ("Different patients, different collection, random split instead of leave-one-center-out, and a benign group "
+         "of 21. A higher number here does not mean serum miRNA is the better test."),
+    ]
+    readme_lines = [
+        "", "### Serum miRNA (GSE59856, Phase 5)", "",
+        *table(["Model"] + [MIRNA_TASKS[t] for t in tasks],
+               [[MIRNA_VARIANTS[v]] + [auc_ci(res(t, v)["model_all"]) for t in tasks] for v in MIRNA_VARIANTS]),
+        "",
+        ("Near-perfect scores appear only where the two groups were likely collected separately; pancreatic vs "
+         "biliary cancer is at chance. Read this as a batch-effect warning, not a better test "
+         "([RESULTS.md](RESULTS.md) section 8, [notebook](notebooks/03_mirna.ipynb))."),
+        "",
+    ]
+    return results_lines, readme_lines
+
+
 def main() -> None:
-    # Step 1: newest run for every (task, variant); stop early if something was never run
-    runs = load_runs()
+    # Step 1: newest run for every (task, variant); stop early if something was never run.
+    #   Sections 1-7 are about the urine model only; the miRNA runs get their own section.
+    all_runs = load_runs()
+    runs = all_runs[all_runs["dataset"] == "urine"].reset_index(drop=True)
+    mirna_runs = all_runs[all_runs["dataset"] == "mirna"].reset_index(drop=True)
     variants = [v for v in VARIANTS if not runs[runs["variant"] == v].empty]
     for task in TASKS:
         for v in ["logreg", "xgboost", "age_only"]:
@@ -118,6 +210,9 @@ def main() -> None:
         f"{stage_b['III-IV']['sensitivity']:.2f} of {stage_b['III-IV']['n_pdac']}). But most I–II cases are IIB, "
         "and only 16 patients are stage I."),
     ]
+
+    # Step 4b: the serum miRNA model (Phase 5), a different cohort -> its own section
+    mirna_results, mirna_readme = mirna_sections(mirna_runs, res)
 
     # Step 5: RESULTS.md, section by section
     L = [
@@ -196,6 +291,7 @@ def main() -> None:
                 "Sens @95% spec: model", "Sens @95% spec: CA19-9"], rows)
 
     L += [
+        *mirna_results,
         "",
         "## Limitations",
         "",
@@ -211,6 +307,9 @@ def main() -> None:
         "(> 0.97 would suggest leakage)."),
         (f"- PDAC vs control ({res('pdac_vs_control', 'logreg')['model_all']['auroc']:.3f}) > PDAC vs benign "
         f"({b['model_all']['auroc']:.3f}), as expected (different splits, rough check only)."),
+        *([(f"- miRNA: highest AUROC {max(r['model_all']['auroc'] for r in mirna_runs['results']):.3f}, above 0.97, "
+            "so it was investigated (section 8, notebook 03): no code leakage (shuffled labels give ~0.5), but a "
+            "strong batch effect.")] if not mirna_runs.empty else []),
         "",
         "## Reproduce",
         "",
@@ -223,12 +322,17 @@ def main() -> None:
         "  python -m pancreasignal.train --task $t --config configs/urine_age_only.yaml",
         "done",
         "# pdac_vs_control: same five commands with --split stratified_kfold",
+        "for t in pdac_vs_control pdac_vs_biliary pdac_vs_benign; do",
+        "  python -m pancreasignal.train --config configs/mirna.yaml --task $t",
+        "  python -m pancreasignal.train --config configs/mirna_demographics.yaml --task $t",
+        "done",
         "python scripts/make_results.py",
         "```",
         "",
         "Runs used:",
         "",
-        *[f"- `reports/{row.run_id}_metrics.json`" for row in runs.sort_values(["task", "variant"]).itertuples()],
+        *[f"- `reports/{row.run_id}_metrics.json`"
+          for row in all_runs.sort_values(["dataset", "task", "variant"]).itertuples()],
     ]
     (PROJECT_ROOT / "RESULTS.md").write_text("\n".join(L) + "\n")
 
@@ -253,6 +357,7 @@ def main() -> None:
         "![ROC curves, PDAC vs benign](docs/figures/roc_pdac_vs_benign.png)",
         "![Calibration curves, PDAC vs benign](docs/figures/calibration_pdac_vs_benign.png)",
         "",
+        *mirna_readme,
     ]
     replace_block(PROJECT_ROOT / "README.md", "\n".join(readme))
 

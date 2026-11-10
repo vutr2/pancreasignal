@@ -83,6 +83,9 @@ def get_splits(df: pd.DataFrame, y: pd.Series, cfg: dict) -> list[Split]:
     """(Done.) Dispatch on cfg['evaluation']['split']."""
     ev = cfg["evaluation"]
     if ev["split"] == "leave_one_center_out":
+        # The miRNA data (Phase 5) has no hospital column, so LOCO is impossible there
+        if not cfg["data"].get("center_column"):
+            raise ValueError("leave_one_center_out needs data.center_column; this dataset has none")
         return leave_one_center_out(df[cfg["data"]["center_column"]], y)
     if ev["split"] == "stratified_kfold":
         return stratified_kfold(y, random_state=ev["random_state"])

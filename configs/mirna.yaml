@@ -1,0 +1,41 @@
+# Experiment config for the serum miRNA model (GSE59856). Phase 5.
+#
+#   python -m pancreasignal.train --config configs/mirna.yaml --task pdac_vs_control
+#
+# Standalone on purpose (no `base: urine.yaml`): the data, features and model are all different,
+# and inheriting would bring in urine-only settings such as center_column: sample_origin.
+
+name: mirna
+
+data:
+  dataset: mirna
+  path: data/raw/mirna_gse59856/GSE59856_series_matrix.txt.gz
+  # No center_column: GEO does not say which hospital a sample came from, so
+  # leave-one-center-out is impossible here. Results are random-split, i.e. optimistic.
+
+# pdac_vs_control | pdac_vs_biliary | pdac_vs_benign (only 21 benign samples)
+task: pdac_vs_control
+
+features:
+  mirna: true              # all 2555 miRNAs; filtering happens INSIDE the model Pipeline
+  demographics: []
+
+model:
+  name: elasticnet
+  params:
+    elasticnet:
+      detection_floor: 2.612     # GEO's value for "not detected" (see data/geo.py)
+      min_detection_rate: 0.5    # keep miRNAs detected in >= 50% of the TRAINING fold
+      # Penalty strength grid for the inner CV. Keep it DENSE: a coarse grid (e.g. 1e-4, 1e-2, 1)
+      # can jump over the useful range and silently pick a model with zero features.
+      Cs: [0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 10.0]
+      l1_ratios: [0.2, 0.5, 0.8]   # 0 = pure L2 (ridge), 1 = pure L1 (lasso)
+      inner_folds: 5
+      max_iter: 3000
+  calibrate: false
+
+evaluation:
+  split: stratified_kfold
+  n_bootstrap: 1000
+  target_specificities: [0.90, 0.95]
+  random_state: 42

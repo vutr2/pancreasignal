@@ -25,19 +25,46 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 from sklearn.metrics import roc_auc_score
+from sklearn.pipeline import Pipeline
 
 from pancreasignal.config import REPORTS_DIR, load_config
+from pancreasignal.data.geo import load_mirna, select_mirna_task
 from pancreasignal.data.urine import load_urine, select_task
 from pancreasignal.evaluation.metrics import compute_metrics, sensitivity_by_stage
 from pancreasignal.evaluation.splits import get_splits
-from pancreasignal.features import build_features
+from pancreasignal.features import build_features, build_mirna_features
 from pancreasignal.models import build_model
 
 
+def load_task_data(cfg: dict) -> tuple[pd.DataFrame, pd.DataFrame, pd.Series]:
+    """(rows, X, y) for cfg['task'] on cfg['data']['dataset']: 'urine' (default) or 'mirna'."""
+    # Step 1: which dataset? `dataset` is optional: configs from Phase 1-4 have none -> urine
+    dataset = cfg["data"].get("dataset", "urine")
+
+    # Step 2: load, keep the rows of this task, build the feature matrix
+    if dataset == "urine":
+        df = load_urine(cfg["data"]["path"])
+        rows, y = select_task(df, cfg["task"])
+        X = build_features(rows, cfg)
+    elif dataset == "mirna":
+        df = load_mirna(cfg["data"]["path"])
+        rows, y = select_mirna_task(df, cfg["task"])
+        X = build_mirna_features(rows, cfg)
+    else:
+        raise ValueError(f"Unknown dataset {dataset!r}. Choose 'urine' or 'mirna'.")
+    return rows, X, y
+
+
+def _n_nonzero_coefs(model) -> int | None:
+    """How many features a linear model really uses (non-zero coefficients). None for trees."""
+    final = model[-1] if isinstance(model, Pipeline) else None
+    if final is None or not hasattr(final, "coef_"):
+        return None
+    return int(np.count_nonzero(final.coef_))
+
+
 def run(cfg: dict) -> dict:
-    df = load_urine(cfg["data"]["path"])
-    rows, y = select_task(df, cfg["task"])
-    X = build_features(rows, cfg)
+    rows, X, y = load_task_data(cfg)
     splits = get_splits(rows, y, cfg)
     if not splits:
         raise RuntimeError(
@@ -47,12 +74,14 @@ def run(cfg: dict) -> dict:
             "within-center, not cross-hospital."
         )
 
+    # Columns that only some datasets have (miRNA: no hospital, no CA19-9) -> NaN / "all"
+    center_column = cfg["data"].get("center_column")
     oof = pd.DataFrame({
         "sample_id": rows["sample_id"],
-        "center": rows[cfg["data"]["center_column"]],
-        "stage": rows["stage"],
+        "center": rows[center_column] if center_column else "all",
+        "stage": rows.get("stage", np.nan),
         "y": y,
-        "ca199": rows["plasma_CA19_9"],
+        "ca199": rows.get("plasma_CA19_9", np.nan),
         "fold": None,
         "prob": np.nan,
     })
@@ -65,15 +94,22 @@ def run(cfg: dict) -> dict:
         oof.loc[oof.index[te], "fold"] = name
         if y.iloc[te].nunique() == 2:
             per_fold[name] = {"n": len(te), "auroc": float(roc_auc_score(y.iloc[te], p))}
+            # p >> n: how many features did this fold's model keep? (varies a lot between folds)
+            n_used = _n_nonzero_coefs(model)
+            if n_used is not None:
+                per_fold[name]["n_nonzero_coefs"] = n_used
 
     scored = oof.dropna(subset=["prob"])
     results = {
+        "dataset": cfg["data"].get("dataset", "urine"),
         "task": cfg["task"],
         "model": cfg["model"]["name"],
         # `name` is optional (old configs/tests have none), so .get with a default is right here
         "name": cfg.get("name", "urine_panel"),
         "calibrated": bool(cfg["model"].get("calibrate")),
-        "features": list(X.columns),
+        "n_features": int(X.shape[1]),
+        # the full list only when it is short (the miRNA model has ~2500 columns)
+        "features": list(X.columns) if X.shape[1] <= 50 else None,
         "split": cfg["evaluation"]["split"],
         "per_fold": per_fold,
         "model_all": compute_metrics(scored["y"], scored["prob"], cfg),

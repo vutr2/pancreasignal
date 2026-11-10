@@ -12,9 +12,11 @@ confounder critic, human review. Every number comes from a reproducible eval har
 python3.12 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev,notebook,tracking]"
 python scripts/download_data.py --only urine   # needs ~/.kaggle/kaggle.json
+python scripts/download_data.py --only mirna_gse59856
 pytest                                         # all tests should pass
 python -m pancreasignal.train --task pdac_vs_benign
-python scripts/make_results.py                 # rebuild RESULTS.md + the table below
+python -m pancreasignal.train --config configs/mirna.yaml --task pdac_vs_control
+python scripts/make_results.py                 # rebuild RESULTS.md + the tables below
 ```
 
 ## Layout
@@ -22,16 +24,16 @@ python scripts/make_results.py                 # rebuild RESULTS.md + the table 
 ```
 configs/            experiment configs (change values here, not in code)
 scripts/            data download, make_results.py (RESULTS.md + tables from reports/)
-notebooks/          01 EDA, 02 results plots: logic lives in src/
+notebooks/          01 EDA, 02 urine results, 03 serum miRNA: logic lives in src/
 docs/figures/       plots used in this README
 src/pancreasignal/
-  data/             loading + validation
+  data/             loading + validation: urine.py (Kaggle), geo.py (GEO miRNA)
   features.py       feature engineering
-  models/           sklearn Pipelines (leak-safe)
+  models/           sklearn Pipelines (leak-safe), incl. elastic-net for p >> n
   evaluation/       splits (leave-one-center-out) + clinical metrics
   train.py          experiment runner -> reports/ (+ MLflow)
   reporting.py      read runs back from reports/
-  explain.py        SHAP (XGBoost), coefficients (logistic regression)
+  explain.py        SHAP, coefficients, miRNA selection stability, batch checks
   api/  agents/     Phase 6+
 tests/              unit tests = definition of done
 ```
@@ -56,6 +58,16 @@ On the same patients, plasma CA19-9 is better: PDAC vs benign AUROC 0.890 vs 0.7
 
 ![ROC curves, PDAC vs benign](docs/figures/roc_pdac_vs_benign.png)
 ![Calibration curves, PDAC vs benign](docs/figures/calibration_pdac_vs_benign.png)
+
+
+### Serum miRNA (GSE59856, Phase 5)
+
+| Model | PDAC vs control | PDAC vs biliary tract cancer | PDAC vs benign |
+|---|---|---|---|
+| Age + sex only (miRNA cohort) | 0.723 (0.645–0.794) | 0.498 (0.417–0.582) | 0.582 (0.439–0.725) |
+| Elastic-net on serum miRNA | 1.000 (1.000–1.000) | 0.520 (0.444–0.603) | 0.999 (0.995–1.000) |
+
+Near-perfect scores appear only where the two groups were likely collected separately; pancreatic vs biliary cancer is at chance. Read this as a batch-effect warning, not a better test ([RESULTS.md](RESULTS.md) section 8, [notebook](notebooks/03_mirna.ipynb)).
 <!-- RESULTS:END -->
 
 **Model card:** [MODEL_CARD.md](MODEL_CARD.md) (intended use, data, limitations).

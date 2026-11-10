@@ -28,12 +28,14 @@ RAW_DIR = PROJECT_ROOT / "data" / "raw"
 MANIFEST = PROJECT_ROOT / "data" / "manifest.json"
 
 GEO_BASE = "https://ftp.ncbi.nlm.nih.gov/geo/series"
+# Platform table (probe ID -> miRNA name). The series matrix only has miRBase IDs (MIMAT...).
+GEO_PLATFORM_URL = "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc={gpl}&targ=self&form=text&view=data"
 
 DATASETS = {
     # Debernardi et al. 2020 (PLOS Med) — urinary LYVE1/REG1B/TFF1 + CA19-9
     "urine": {"type": "kaggle", "slug": "johnjdavisiv/urinary-biomarkers-for-pancreatic-cancer"},
-    # Serum miRNA, pancreatic & biliary tract cancers
-    "mirna_gse59856": {"type": "geo", "gse": "GSE59856"},
+    # Serum miRNA, pancreatic & biliary tract cancers (Toray 3D-Gene array, platform GPL18941)
+    "mirna_gse59856": {"type": "geo", "gse": "GSE59856", "platform": "GPL18941"},
     # Serum miRNomes, early-stage cancers (large; ~hundreds of MB)
     "mirna_gse211692": {"type": "geo", "gse": "GSE211692"},
 }
@@ -78,10 +80,13 @@ def download_url(url: str, dest: Path) -> None:
     tmp.rename(dest)  # only "complete" files get the final name
 
 
-def download_geo(gse: str, out_dir: Path) -> str:
+def download_geo(gse: str, out_dir: Path, platform: str | None = None) -> str:
     # GEO folder convention: GSE59856 -> GSE59nnn
     url = f"{GEO_BASE}/{gse[:-3]}nnn/{gse}/matrix/{gse}_series_matrix.txt.gz"
     download_url(url, out_dir / f"{gse}_series_matrix.txt.gz")
+    # Optional: platform table, so results can show miRNA names instead of MIMAT IDs
+    if platform:
+        download_url(GEO_PLATFORM_URL.format(gpl=platform), out_dir / f"{platform}.txt")
     return url
 
 
@@ -103,7 +108,7 @@ def main() -> None:
             if cfg["type"] == "kaggle":
                 source = download_kaggle(cfg["slug"], out_dir)
             else:
-                source = download_geo(cfg["gse"], out_dir)
+                source = download_geo(cfg["gse"], out_dir, cfg.get("platform"))
             update_manifest(name, out_dir, source)
             print(f"[ok  ] {name} -> {out_dir.relative_to(PROJECT_ROOT)}")
         except Exception as e:  # keep going with other datasets

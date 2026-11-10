@@ -64,3 +64,46 @@ def cfg() -> dict:
         "evaluation": {"split": "leave_one_center_out", "n_bootstrap": 200,
                        "target_specificities": [0.9, 0.95], "random_state": 0},
     }
+
+
+# ---------------- Phase 5: fake miRNA table ----------------
+def make_fake_mirna(seed: int = 0) -> pd.DataFrame:
+    """SMALL RANDOM TABLE shaped like data/geo.load_mirna(): metadata + MIMAT columns.
+    miRNA 0-4 are higher in pdac, 5-24 are noise, 25-39 are mostly undetected (floor 2.612)."""
+    rng = np.random.default_rng(seed)
+    groups = ["control"] * 60 + ["pdac"] * 40 + ["biliary"] * 20 + ["benign"] * 10
+    n = len(groups)
+    is_pdac = np.array([g == "pdac" for g in groups])
+    meta = pd.DataFrame({
+        "sample_id": [f"GSM{i}" for i in range(n)],
+        "title": [f"{g} X{i}" for i, g in enumerate(groups)],
+        "title_prefix": ["S" if i % 2 else "E" for i in range(n)],
+        "diagnosis": groups,
+        "age": rng.integers(40, 80, n).astype(float),
+        "sex": rng.choice(["M", "F"], n),
+        "stage": [("IIB" if i % 3 == 0 else "IV") if p else None for i, p in enumerate(is_pdac)],
+        "operability": "uncertain",
+    })
+    meta.loc[0, "age"] = np.nan  # like GEO's "age: uncertain"
+    values = rng.normal(6, 1, (n, 40))
+    values[:, :5] += 1.5 * is_pdac[:, None]
+    values[:, 25:] = np.where(rng.uniform(size=(n, 15)) < 0.9, 2.612, values[:, 25:])
+    values = np.maximum(values, 2.612)
+    expr = pd.DataFrame(values, columns=[f"MIMAT{i:07d}" for i in range(40)])
+    return pd.concat([meta, expr], axis=1)
+
+
+@pytest.fixture
+def fake_mirna() -> pd.DataFrame:
+    return make_fake_mirna()
+
+
+@pytest.fixture
+def mirna_cfg() -> dict:
+    """configs/mirna.yaml, with a small grid so tests stay fast."""
+    from pancreasignal.config import load_config
+
+    cfg = load_config("configs/mirna.yaml")
+    cfg["model"]["params"]["elasticnet"].update(Cs=[0.01, 0.1, 1.0], l1_ratios=[0.5], inner_folds=3)
+    cfg["evaluation"]["n_bootstrap"] = 50
+    return cfg

@@ -26,6 +26,17 @@ TASKS = {
     "pdac_vs_rest": "PDAC vs rest",
 }
 
+# Phase 5: serum miRNA (GSE59856), a different cohort, so it gets its own variants and tasks
+MIRNA_VARIANTS = {
+    "mirna_demographics": "Age + sex only (miRNA cohort)",
+    "mirna": "Elastic-net on serum miRNA",
+}
+MIRNA_TASKS = {
+    "pdac_vs_control": "PDAC vs control",
+    "pdac_vs_biliary": "PDAC vs biliary tract cancer",
+    "pdac_vs_benign": "PDAC vs benign",
+}
+
 
 def variant_of(results: dict) -> str:
     """Give a run a short key such as 'age_only', 'logreg', 'logreg_calibrated', 'xgboost'."""
@@ -45,7 +56,7 @@ def variant_of(results: dict) -> str:
 def load_runs(reports_dir: str | Path = REPORTS_DIR) -> pd.DataFrame:
     """One row per (task, variant), keeping only the NEWEST run.
 
-    Columns: run_id, task, variant, split, results (the whole metrics dict), oof_path.
+    Columns: run_id, dataset, task, variant, split, results (the whole metrics dict), oof_path.
     """
     # Step 1: read every metrics file
     rows = []
@@ -54,6 +65,7 @@ def load_runs(reports_dir: str | Path = REPORTS_DIR) -> pd.DataFrame:
         run_id = path.name.removesuffix("_metrics.json")
         rows.append({
             "run_id": run_id,
+            "dataset": data.get("dataset", "urine"),  # reports before Phase 5 have no dataset
             "task": data["task"],
             "variant": variant_of(data),
             "split": data["split"],
@@ -66,8 +78,8 @@ def load_runs(reports_dir: str | Path = REPORTS_DIR) -> pd.DataFrame:
     # Step 2: run_id starts with a timestamp (YYYYMMDD-HHMMSS), so sorting by it = oldest first
     runs = pd.DataFrame(rows).sort_values("run_id")
 
-    # Step 3: keep the newest run of each (task, variant); older reruns are ignored
-    return runs.drop_duplicates(["task", "variant"], keep="last").reset_index(drop=True)
+    # Step 3: keep the newest run of each (dataset, task, variant); older reruns are ignored
+    return runs.drop_duplicates(["dataset", "task", "variant"], keep="last").reset_index(drop=True)
 
 
 def paired_oof(runs: pd.DataFrame, task: str, variant_a: str, variant_b: str) -> pd.DataFrame:
