@@ -77,7 +77,11 @@ def build_features(df: pd.DataFrame, cfg: dict) -> pd.DataFrame:
     if features["log_transform"]:
         # Order matters: log1p(biomarker / creatinine), not log1p(biomarker) / creatinine.
         result = log_transform(result, biomarkers)
-    result = encode_sex(result)
+
+    # Only encode sex when it is a feature. The age-only baseline (configs/urine_age_only.yaml)
+    # has demographics: [age], so there is no 'sex' column to encode.
+    if "sex" in demographics:
+        result = encode_sex(result)
 
     # Drop creatinine here: fixed column order, only the model features.
     return result[biomarkers + demographics]

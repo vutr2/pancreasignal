@@ -1,0 +1,20 @@
+# Baseline: logistic regression on AGE ONLY. Everything else is inherited from urine.yaml.
+#
+# Why: PDAC patients in this dataset are ~10 years older than the others, so a model can look
+# good just by learning "older = cancer". The biomarker model only adds value if it clearly
+# beats this baseline on the same splits.
+#
+#   python -m pancreasignal.train --config configs/urine_age_only.yaml --task pdac_vs_benign
+
+base: urine.yaml
+name: age_only
+
+features:
+  biomarkers: []            # no urine proteins
+  demographics: [age]
+  normalize_by_creatinine: false
+  log_transform: false
+
+model:
+  name: logreg
+  calibrate: false

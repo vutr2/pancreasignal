@@ -8,6 +8,7 @@ from __future__ import annotations
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
+from sklearn.calibration import CalibratedClassifierCV
 
 
 def build_logreg(params: dict) -> Pipeline:
@@ -25,7 +26,14 @@ def build_logreg(params: dict) -> Pipeline:
 
 def build_xgboost(params: dict) -> Pipeline:
     """Pipeline: XGBClassifier(**params, eval_metric='logloss'). No scaler needed for trees."""
-    raise NotImplementedError("TODO(Phase 4): implement build_xgboost")
+
+    from xgboost import XGBClassifier
+
+    return Pipeline(
+        [
+            ("xgb", XGBClassifier(**params, eval_metric="logloss")),
+        ]
+    )
 
 
 def build_model(cfg: dict) -> Pipeline:
@@ -38,5 +46,6 @@ def build_model(cfg: dict) -> Pipeline:
     if m.get("calibrate"):
         # TODO(Phase 4): wrap `model` in sklearn.calibration.CalibratedClassifierCV
         #   (method="isotonic", cv=5) and return it.
-        raise NotImplementedError("TODO(Phase 4): calibration")
+        model = CalibratedClassifierCV(model, method="isotonic", cv=5)
+        
     return model

@@ -16,6 +16,9 @@ reports/*
 .env
 kaggle.json
 
+# private learning notes (stay on this Mac only, never pushed)
+LEARNING_NOTES.md
+
 # python
 __pycache__/
 *.pyc

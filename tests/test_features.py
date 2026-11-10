@@ -60,3 +60,12 @@ def test_build_features_flags_off(fake_urine, cfg):
     cfg["features"]["log_transform"] = False
     X = build_features(fake_urine, cfg)
     assert np.allclose(X["LYVE1"], fake_urine["LYVE1"])
+
+
+def test_build_features_age_only(fake_urine, cfg):
+    # configs/urine_age_only.yaml: no biomarkers, no sex
+    cfg["features"].update(biomarkers=[], demographics=["age"],
+                           normalize_by_creatinine=False, log_transform=False)
+    X = build_features(fake_urine, cfg)
+    assert list(X.columns) == ["age"]
+    assert X["age"].equals(fake_urine["age"])
