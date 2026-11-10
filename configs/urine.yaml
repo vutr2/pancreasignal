@@ -1,0 +1,32 @@
+# Experiment config for the urinary biomarker model (Debernardi et al. 2020).
+# Change values here, not in code. Every run logs this file.
+
+data:
+  path: data/raw/urine/Debernardi et al 2020 data.csv   # check the exact filename after download
+  center_column: sample_origin                            # BPTB, LIV, ESP, UCL
+
+# Which comparison to model. One run = one task.
+#   pdac_vs_control : healthy (1) vs PDAC (3)          — easiest, inflated
+#   pdac_vs_benign  : benign hepatobiliary (2) vs PDAC (3) — the clinically hard one
+#   pdac_vs_rest    : (1 + 2) vs PDAC (3)
+task: pdac_vs_benign
+
+features:
+  # Urine panel. REG1A and plasma_CA19_9 are missing for many rows — keep them out of v1.
+  biomarkers: [LYVE1, REG1B, TFF1]
+  demographics: [age, sex]
+  normalize_by_creatinine: true     # TODO(Phase 2): implement in features.py
+  log_transform: true               # TODO(Phase 2): implement in features.py
+
+model:
+  name: logreg                      # logreg | xgboost   (ca199 baseline runs automatically)
+  params:
+    logreg: {C: 1.0, max_iter: 1000}
+    xgboost: {n_estimators: 300, max_depth: 3, learning_rate: 0.05, subsample: 0.8}
+  calibrate: false                  # TODO(Phase 4): isotonic calibration
+
+evaluation:
+  split: leave_one_center_out       # leave_one_center_out | stratified_kfold
+  n_bootstrap: 1000
+  target_specificities: [0.90, 0.95]
+  random_state: 42

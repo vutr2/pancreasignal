@@ -1,0 +1,28 @@
+# data — never commit raw data
+data/*
+!data/.gitkeep
+!data/manifest.json
+
+# experiment outputs
+mlruns/
+mlartifacts/
+reports/*
+!reports/.gitkeep
+*.joblib
+*.pkl
+
+# secrets
+.env
+kaggle.json
+
+# python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# notebooks / OS
+.ipynb_checkpoints/
+.DS_Store
