@@ -1,0 +1,17 @@
+# Keep the image small and free of data, secrets and private files.
+.git
+.venv
+data
+reports
+mlruns
+mlartifacts
+mlflow.db
+notebooks
+docs
+tests
+**/__pycache__
+.pytest_cache
+.ruff_cache
+.env
+kaggle.json
+LEARNING_NOTES.md

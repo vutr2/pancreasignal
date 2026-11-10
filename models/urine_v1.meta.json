@@ -1,0 +1,37 @@
+{
+  "file": "urine_v1.joblib",
+  "sha256": "20139cf13c41b2e9cb58cd2926de4130709881815467abbc664b70b9079acf10",
+  "name": "urine_panel",
+  "task": "pdac_vs_rest",
+  "features": [
+    "LYVE1",
+    "REG1B",
+    "TFF1",
+    "age",
+    "sex"
+  ],
+  "n_train": 590,
+  "n_pdac": 199,
+  "trained_at": "2026-11-10T18:00:05+00:00",
+  "data_files_sha256": {
+    "Debernardi et al 2020 data.csv": "74879b8ee6c0d95d36b92d44a39cc217bb920b7633346378979082046d726b89",
+    "Debernardi et al 2020 documentation.csv": "d7784b95fe3ce53b35126ec92b5eb99449b3ff10179f33e28a1d310f6ff738d1"
+  },
+  "git": {
+    "commit": "dc886ab338b11f0c601ee17722bfead4b7f42975",
+    "uncommitted_changes": true
+  },
+  "python_version": "3.14.4",
+  "sklearn_version": "1.9.1",
+  "performance_reference": {
+    "run_id": "20261110-234839_pdac_vs_rest_logreg_urine_panel",
+    "split": "leave_one_center_out",
+    "auroc": 0.7849896382180443,
+    "auroc_ci95": [
+      0.7448743963912611,
+      0.8225831237594977
+    ],
+    "sens_at_spec90": 0.5376884422110553,
+    "sens_at_spec95": 0.4020100502512563
+  }
+}

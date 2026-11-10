@@ -10,7 +10,7 @@ confounder critic, human review. Every number comes from a reproducible eval har
 
 ```bash
 python3.12 -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev,notebook,tracking]"
+pip install -e ".[dev,notebook,tracking,api]"
 python scripts/download_data.py --only urine   # needs ~/.kaggle/kaggle.json
 python scripts/download_data.py --only mirna_gse59856
 pytest                                         # all tests should pass
@@ -71,6 +71,30 @@ Near-perfect scores appear only where the two groups were likely collected separ
 <!-- RESULTS:END -->
 
 **Model card:** [MODEL_CARD.md](MODEL_CARD.md) (intended use, data, limitations).
+
+## API
+
+The urine logistic regression (trained on all 590 samples, task PDAC vs rest) behind FastAPI.
+
+```bash
+python scripts/export_model.py                 # -> models/urine_v1.joblib (+ .meta.json with its SHA-256)
+uvicorn pancreasignal.api.app:app --reload     # docs at http://127.0.0.1:8000/docs
+curl -s -X POST http://127.0.0.1:8000/predict -H "Content-Type: application/json" -d '{
+  "lyve1": {"value": 5.6, "unit": "ng/mL"}, "reg1b": {"value": 123, "unit": "ng/mL"},
+  "tff1": {"value": 720, "unit": "ng/mL"}, "creatinine": {"value": 6.4, "unit": "mmol/L"},
+  "age": 67, "sex": "M"}'
+```
+
+- **Units are required on every lab value** and converted to the training units (proteins ng/mL, creatinine
+  mg/mL). Accepted: ng/mL, µg/L, pg/mL, ng/L, µg/mL, mg/L for proteins; mg/mL, g/L, mg/dL, mg/L, mmol/L, µmol/L
+  for creatinine. Unknown units get HTTP 422; they are never guessed.
+- **Response:** probability, top 3 reasons (exact per-feature contributions of the logistic regression, in
+  log-odds), an out-of-distribution flag when any input is outside the training range, a unit-mistake warning
+  for values 10x above anything seen in training, and standing warnings (case-control probability, no
+  calibration across hospitals).
+- **Safety:** the app refuses to load a model file whose SHA-256 does not match `models/urine_v1.meta.json`.
+- **Docker:** `docker build -t pancreasignal-api . && docker run --rm -p 8000:8000 pancreasignal-api`
+  (export the model first; it is copied into the image).
 
 ## Data
 
