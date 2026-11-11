@@ -39,9 +39,23 @@ def _setup(light: dict) -> dict:
 
 
 def test_draft_before_setup_is_an_error(monkeypatch):
-    monkeypatch.setitem(browser_demo._session, "risk", None)
+    monkeypatch.setitem(browser_demo._session, "engines", {})
     with pytest.raises(RuntimeError, match="setup"):
         browser_demo.draft("[]")
+
+
+def test_sklearn_engine_is_checked_against_the_python_engine():
+    """enable_sklearn() rebuilds a real Pipeline and compares it with the pure-Python copy on the cases."""
+    _setup(fake_light())
+    with pytest.raises(ValueError, match="not loaded"):
+        browser_demo.set_engine("sklearn")
+    check = json.loads(browser_demo.enable_sklearn())
+    assert check["cases_checked"] == 7 and check["max_probability_difference"] < 1e-12
+    assert browser_demo.set_engine("sklearn") == "numpy + scikit-learn"
+    form = json.loads(browser_demo.setup(json.dumps(fake_light()), json.dumps(SNAPSHOT), json.dumps(CASES)))["cases"][0]["form"]
+    browser_demo.enable_sklearn()
+    browser_demo.set_engine("sklearn")
+    assert json.loads(browser_demo.draft(json.dumps(form)))["engine"] == "numpy + scikit-learn"
 
 
 def test_setup_gives_the_page_its_form():
@@ -70,7 +84,10 @@ def test_demo_cases_in_the_browser_path(case):
     from pancreasignal.api.bundle import load_bundle
 
     info = _setup(json.loads(json.dumps(export_light(load_bundle(MODEL)))))
+    browser_demo.enable_sklearn()
     form = next(c["form"] for c in info["cases"] if c["case_id"] == case["case_id"])
-    d = json.loads(browser_demo.draft(json.dumps(form)))
-    assert d["decision"] == case["expect"]["decision"]
-    assert sorted(d["findings"]) == sorted(case["expect"]["findings"])
+    for engine in ("python", "sklearn"):
+        browser_demo.set_engine(engine)
+        d = json.loads(browser_demo.draft(json.dumps(form)))
+        assert d["decision"] == case["expect"]["decision"], engine
+        assert sorted(d["findings"]) == sorted(case["expect"]["findings"]), engine

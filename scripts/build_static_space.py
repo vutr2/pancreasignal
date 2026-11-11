@@ -45,8 +45,9 @@ REPO_URL = "https://github.com/vutr2/pancreasignal"
 
 
 def browser_modules() -> list[str]:
-    """Source files of every pancreasignal module that browser_demo imports (asked from a fresh Python)."""
-    code = ("import sys, pancreasignal.browser_demo\n"
+    """Source files of every pancreasignal module the browser runs (asked from a fresh Python)."""
+    # browser_demo (pure-Python engine) + api/bundle (the scikit-learn engine's serving code)
+    code = ("import sys, pancreasignal.browser_demo, pancreasignal.api.bundle\n"
             "print('\\n'.join(sorted(m.__file__ for n, m in sys.modules.items()\n"
             "      if n.split('.')[0] == 'pancreasignal' and getattr(m, '__file__', None))))")
     out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, check=True, cwd=PROJECT_ROOT)

@@ -10,7 +10,13 @@ import pytest
 import yaml
 
 from pancreasignal.agents.clinical import CaseInput
-from pancreasignal.api.light import LIGHT_FORMAT, export_light, percentile, predict_row_light
+from pancreasignal.api.light import (
+    LIGHT_FORMAT,
+    export_light,
+    percentile,
+    predict_row_light,
+    to_sklearn_bundle,
+)
 from pancreasignal.config import PROJECT_ROOT
 
 MODEL = PROJECT_ROOT / "models" / "urine_v1.joblib"
@@ -73,6 +79,27 @@ def test_light_equals_sklearn_on_random_inputs(bundle, light):
         _same(predict_row(bundle, inputs, age, sex), predict_row_light(light, inputs, age, sex))
 
 
+@needs_model
+def test_rebuilt_sklearn_pipeline_equals_the_pickled_one(bundle, light):
+    """to_sklearn_bundle (what the browser's scikit-learn engine runs) = the original .joblib, exactly,
+    and without scikit-learn warnings (e.g. about feature names)."""
+    import warnings
+
+    from pancreasignal.api.bundle import predict_row
+
+    rebuilt = to_sklearn_bundle(light)
+    rng = random.Random(2)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        for _ in range(300):
+            inputs = {m: 10 ** rng.uniform(-5, 5) for m in ("LYVE1", "REG1B", "TFF1")}
+            inputs["creatinine"] = 10 ** rng.uniform(-3, 1.5)
+            age, sex = rng.uniform(18, 99), rng.choice("MF")
+            a, b = predict_row(bundle, inputs, age, sex), predict_row(rebuilt, inputs, age, sex)
+            assert a["probability"] == b["probability"]
+            _same(a, b)
+
+
 def test_percentile_matches_numpy():
     import numpy as np
 
@@ -85,6 +112,41 @@ def test_light_rejects_other_files():
     with pytest.raises(ValueError, match="light model"):
         predict_row_light({"format": "something-else"}, {}, 60, "M")
     assert LIGHT_FORMAT.startswith("pancreasignal-light")
+
+
+def _module_level_imports(path) -> set[str]:
+    """Top-level names imported when a module is loaded (imports inside functions do not count)."""
+    import ast
+
+    names, stack = set(), list(ast.parse(path.read_text()).body)
+    while stack:
+        node = stack.pop()
+        if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef | ast.Lambda):
+            continue
+        if isinstance(node, ast.Import):
+            names |= {a.name.split(".")[0] for a in node.names}
+        elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
+            names.add(node.module.split(".")[0])
+        stack.extend(ast.iter_child_nodes(node))
+    return names
+
+
+def test_browser_sklearn_engine_needs_only_pyodide_packages():
+    """The scikit-learn engine imports the serving code (api/bundle.py). Our modules it loads may only
+    import what Pyodide ships: not the training code's mlflow/xgboost/shap, not requests or LangGraph.
+    (Optional imports inside pandas/joblib, e.g. pyarrow or psutil, are their business: they are skipped
+    when missing. The real proof is running it in Pyodide: see deploy/static/README.md.)"""
+    import importlib.util
+    from pathlib import Path
+
+    code = ("import sys, pancreasignal.browser_demo, pancreasignal.api.bundle\n"
+            "print(' '.join(m for m in sys.modules if m.split('.')[0] == 'pancreasignal'))")
+    ours = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, check=True,
+                          cwd=PROJECT_ROOT).stdout.split()
+    imported = set().union(*(_module_level_imports(Path(importlib.util.find_spec(m).origin)) for m in ours))
+    third_party = imported - set(sys.stdlib_module_names) - {"pancreasignal", "__future__"}
+    assert third_party <= {"pydantic", "numpy", "pandas", "sklearn", "joblib", "yaml"}, third_party
+    assert "pancreasignal.train" not in ours and "pancreasignal.models" not in ours
 
 
 def test_browser_code_needs_only_pydantic():

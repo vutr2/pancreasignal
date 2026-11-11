@@ -28,8 +28,6 @@ import sklearn
 from pancreasignal.api.light import UNIT_ERROR_FACTOR, check_ranges, percentile  # noqa: F401 (re-export)
 from pancreasignal.config import PROJECT_ROOT
 from pancreasignal.features import build_features
-from pancreasignal.models import build_model
-from pancreasignal.train import load_task_data
 
 BUNDLE_VERSION = 1
 RAW_INPUTS = ["LYVE1", "REG1B", "TFF1", "creatinine", "age"]   # checked against training ranges
@@ -80,6 +78,10 @@ def build_bundle(cfg: dict) -> dict:
         raise ValueError("The API serves the urine logistic regression only (model.name = 'logreg', no calibration)")
 
     # Step 2: same data and features as train.run; fit on every row (evaluation was done out-of-fold)
+    #   (imported here: serving a bundle must not need the training code, e.g. in the browser demo)
+    from pancreasignal.models import build_model
+    from pancreasignal.train import load_task_data
+
     rows, X, y = load_task_data(cfg)
     model = build_model(cfg).fit(X, y)
 

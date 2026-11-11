@@ -105,6 +105,12 @@
   <section id="tab-agent" class="panel active" role="tabpanel">
     <div class="grid">
       <div class="card">
+        <label for="engine">Model engine</label>
+        <select id="engine" disabled>
+          <option value="python">pure Python</option>
+          <option value="sklearn" disabled>numpy + scikit-learn (loading…)</option>
+        </select>
+        <div id="engine-note" class="muted"></div>
         <label for="example">Load a synthetic case (or edit the values below)</label>
         <select id="example" disabled><option>Loading…</option></select>
         <label for="f-case_id">Case ID</label>
@@ -170,8 +176,13 @@
       <h3>What runs on this page</h3>
       <p>This free version has no server. <a href="https://pyodide.org" target="_blank" rel="noopener">Pyodide</a> runs the
         project's own Python in your browser: the same step functions, critic rules, unit checks and report templates as the
-        server agent. The urine model runs as a pure-Python copy of the scikit-learn model (its coefficients in JSON), tested
-        to give the same output. Nothing you type leaves this page.</p>
+        server agent. Nothing you type leaves this page.</p>
+      <p>The urine model has two engines. <b>Pure Python</b> (its coefficients in JSON, recomputed without numpy) makes the
+        page usable within seconds. Meanwhile numpy, pandas and <b>scikit-learn</b> load in the background (about 27 MB) and
+        take over: a real scikit-learn Pipeline, rebuilt from the same numbers, served by the project's normal prediction code
+        (pandas feature building + <code>predict_proba</code>). The saved <code>.joblib</code> itself cannot be used here: it
+        was written by scikit-learn 1.9 and the browser has 1.8, and a pickle is only safe with the version that wrote it.
+        When it starts, the page checks that both engines give the same probability on the demo cases.</p>
       <p>The full version (in the repository) runs these steps as a LangGraph graph with a checkpointer and
         <code>interrupt()</code> for the human review, traces every node, and can answer free questions with the live RAG,
         which needs an API key and therefore a server.</p>
@@ -228,10 +239,11 @@ function fillForm(values) {
   });
 }
 
-function renderTrace(timings) {
+function renderTrace(timings, engine) {
   const rows = timings.map((t) =>
     `<tr><td>${t.node}</td><td>${t.status}</td><td class="num">${(t.duration_s * 1000).toFixed(1)}</td></tr>`).join("");
-  $("trace").innerHTML = `<h3>Trace</h3><table><thead><tr><th>node</th><th>status</th><th class="num">ms</th></tr></thead><tbody>${rows}</tbody></table>`;
+  $("trace").innerHTML = `<h3>Trace <span class="muted">(model engine: ${engine})</span></h3>` +
+    `<table><thead><tr><th>node</th><th>status</th><th class="num">ms</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
 function setReviewButtons(enabled) {
@@ -246,7 +258,7 @@ function runAgent() {
     const kind = out.decision === "abstain" ? "block" : (out.findings.length ? "warn" : "ok");
     setStatus(`<b>Paused for human review.</b> Read the draft below, then approve or reject it.<br>${md(out.headline)}`, kind);
     $("report").innerHTML = md(out.markdown);
-    renderTrace(out.timings);
+    renderTrace(out.timings, out.engine);
     setReviewButtons(true);
     $("download").disabled = true;
     lastReport = null;
@@ -274,6 +286,28 @@ function download() {
   const a = Object.assign(document.createElement("a"), {href: url, download: `${lastReport.case_id}_report.md`});
   a.click();
   URL.revokeObjectURL(url);
+}
+
+// ---------------------------------------------------------------- scikit-learn engine (background)
+async function loadSklearn(pyodide) {
+  const note = $("engine-note");
+  try {
+    note.textContent = "Loading numpy, pandas and scikit-learn in the background (about 27 MB, first visit only)…";
+    await pyodide.loadPackage(["numpy", "pandas", "scikit-learn", "pyyaml"]);
+    // Python rebuilds the Pipeline and compares it with the pure-Python engine on the demo cases
+    const check = JSON.parse(demo.enable_sklearn());
+    const option = $("engine").querySelector('option[value="sklearn"]');
+    option.disabled = false;
+    option.textContent = `numpy + scikit-learn ${check.sklearn}`;
+    $("engine").value = "sklearn";
+    demo.set_engine("sklearn");
+    const diff = check.max_probability_difference;
+    note.textContent = `scikit-learn ${check.sklearn} (numpy ${check.numpy}, pandas ${check.pandas}) now runs the model. ` +
+      `Same probability as the pure-Python engine on ${check.cases_checked} demo cases ` +
+      `(largest difference ${diff === 0 ? "0" : diff.toExponential(1)}).`;
+  } catch (err) {
+    note.textContent = "scikit-learn could not be loaded (" + pythonError(err) + "); the pure-Python engine keeps working.";
+  }
 }
 
 // ---------------------------------------------------------------- start-up
@@ -311,7 +345,9 @@ async function boot() {
     $("n-train").textContent = info.model.n_train;
     $("example").disabled = false;
     $("run").disabled = false;
+    $("engine").disabled = false;
     setStatus("Ready. Load a case (or type values), then press <b>Run agent</b>. Everything runs in your browser.");
+    loadSklearn(pyodide);              // not awaited: the page is usable while it loads
   } catch (err) {
     setStatus("Could not start the demo: " + pythonError(err), "block");
   }
@@ -325,6 +361,9 @@ document.querySelectorAll(".tabs button").forEach((btn) => btn.addEventListener(
 $("example").addEventListener("change", (e) => {
   const c = cases.find((x) => x.case_id === e.target.value);
   if (c) fillForm(c.form);
+});
+$("engine").addEventListener("change", (e) => {
+  try { demo.set_engine(e.target.value); } catch (err) { setStatus("Error: " + pythonError(err), "block"); }
 });
 $("run").addEventListener("click", runAgent);
 $("approve").addEventListener("click", () => review("approve"));

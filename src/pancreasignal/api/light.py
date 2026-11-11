@@ -75,11 +75,47 @@ def export_light(bundle: dict) -> dict:
         "features": dict(bundle["cfg"]["features"]),
         "feature_order": order,
         "scaler": {"mean": [float(x) for x in scaler.mean_], "scale": [float(x) for x in scaler.scale_]},
-        "logreg": {"coef": [float(x) for x in logreg.coef_[0]], "intercept": float(logreg.intercept_[0])},
+        "logreg": {"coef": [float(x) for x in logreg.coef_[0]], "intercept": float(logreg.intercept_[0]),
+                   "classes": [int(c) for c in logreg.classes_]},
         "ranges": {"inputs": floats(bundle["ranges"]["inputs"]), "features": floats(bundle["ranges"]["features"])},
         "quantiles": {f: [float(x) for x in q] for f, q in bundle["quantiles"].items()},
         "meta": bundle["meta"],
     }
+
+
+def to_sklearn_bundle(light: dict) -> dict:
+    """A full bundle with a REAL scikit-learn Pipeline, rebuilt from the exported numbers (no pickle).
+
+    For places that have scikit-learn but not the version that wrote the .joblib: the browser has
+    scikit-learn 1.8 (Pyodide), the model was saved with 1.9, and a pickle is only safe with the same
+    version. Setting the fitted attributes by hand gives the same model in any version, and then the
+    normal serving code (api/bundle.predict_row: pandas build_features + predict_proba) runs on it.
+    Tests: tests/test_light_model.py (same predictions as the original bundle)."""
+    import numpy as np  # imported here: the rest of this file needs no numpy
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.pipeline import Pipeline
+    from sklearn.preprocessing import StandardScaler
+
+    # Step 1: the scaler, exactly as fit() would have left it
+    names = np.array(light["feature_order"], dtype=object)
+    scaler = StandardScaler()
+    scaler.mean_ = np.array(light["scaler"]["mean"])
+    scaler.scale_ = np.array(light["scaler"]["scale"])
+    scaler.var_ = scaler.scale_ ** 2
+    scaler.n_features_in_, scaler.feature_names_in_ = len(names), names
+    scaler.n_samples_seen_ = light["meta"]["n_train"]
+
+    # Step 2: the logistic regression (coefficients, intercept, class labels)
+    logreg = LogisticRegression()
+    logreg.coef_ = np.array([light["logreg"]["coef"]])
+    logreg.intercept_ = np.array([light["logreg"]["intercept"]])
+    logreg.classes_ = np.array(light["logreg"].get("classes", [0, 1]))
+    logreg.n_features_in_ = len(names)   # no feature names: inside a Pipeline it receives the scaler's array
+
+    # Step 3: the same dict shape as api/bundle.build_bundle (no "format" key -> served as a full bundle)
+    return {"model": Pipeline([("scaler", scaler), ("logreg", logreg)]),
+            "cfg": {"features": dict(light["features"])},
+            "ranges": light["ranges"], "quantiles": light["quantiles"], "meta": light["meta"]}
 
 
 def build_features_light(cfg_features: dict, inputs: dict[str, float], age: float, sex: str) -> dict[str, float]:

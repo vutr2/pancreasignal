@@ -164,7 +164,7 @@ report and the per-step trace):
 |---|---|---|
 | Runs | in the visitor's browser ([Pyodide](https://pyodide.org)) | Gradio app (`python -m pancreasignal.demo`) |
 | Agent | the same step functions (`agents/steps.py`), run in a row | LangGraph graph: checkpointer, `interrupt()` |
-| Urine model | `api/light.py`: its coefficients in JSON, tested equal to scikit-learn | the exported `.joblib` |
+| Urine model | pure Python (`api/light.py`) at once, then **numpy + pandas + scikit-learn 1.8** loaded in the background: a real Pipeline rebuilt from the coefficients (the 1.9 pickle cannot load there), checked against the pure-Python engine in the page | the exported `.joblib` |
 | Guideline evidence | snapshot of the RAG's answers to the critic's fixed questions | snapshot, or the live RAG |
 | Free questions to the RAG | no (would need an API key, hence a server) | yes, with `NVIDIA_API_KEY` as a Space secret, rationed |
 
@@ -184,8 +184,9 @@ python scripts/build_space.py --set-secret <hf-username>/<space>   # .env key ->
   their cited answers are computed once by the RAG (`reports/demo/evidence_snapshot.json`).
 - **No key in any uploaded file:** both build scripts copy an allow-list of files and refuse to finish if a file
   looks like an NVIDIA or Hugging Face key.
-- **Tests:** `tests/test_light_model.py` (light model = scikit-learn on the demo cases and 300 random patients;
-  the browser code needs only pydantic), `tests/test_browser_demo.py`, `tests/test_demo.py`.
+- **Tests:** `tests/test_light_model.py` (pure-Python copy and rebuilt Pipeline = the pickled model on the demo
+  cases and 300 random patients; the browser code needs only what Pyodide ships), `tests/test_browser_demo.py`
+  (both engines, all 8 cases), `tests/test_demo.py`.
 
 ## Data
 

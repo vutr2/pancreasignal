@@ -28,8 +28,11 @@ browser (`pancreasignal.zip`: the agent's step functions, critic rules, unit val
 so nothing typed on the page leaves the browser.
 
 - **Model:** `model_light.json` holds the coefficients, scaling, value ranges and percentiles of the
-  served logistic regression (no patient rows). `api/light.py` recomputes it in pure Python; tests check
-  it gives the same output as the scikit-learn model.
+  served logistic regression (no patient rows). Two engines: pure Python (`api/light.py`, ready within
+  seconds) and **numpy + pandas + scikit-learn**, loaded in the background (about 27 MB): a real
+  scikit-learn Pipeline rebuilt from the same numbers and served by the normal prediction code. The
+  `.joblib` pickle is not used (written by scikit-learn 1.9; the browser has 1.8). Tests check all three
+  give the same probabilities, and the page re-checks the two engines on the demo cases at start-up.
 - **Guideline evidence:** the critic only asks fixed questions, so their cited answers were computed once
   with the project's RAG and ship as `evidence_snapshot.json`. Free questions to the live RAG need an API
   key, hence a server: they are only in the full version (repository).
