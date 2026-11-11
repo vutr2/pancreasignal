@@ -12,6 +12,7 @@ tests
 **/__pycache__
 .pytest_cache
 .ruff_cache
-.env
-kaggle.json
+# secrets at ANY depth (a bare ".env" only matches the one in the project root)
+**/.env
+**/kaggle.json
 LEARNING_NOTES.md

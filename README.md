@@ -10,20 +10,28 @@ confounder critic, human review. Every number comes from a reproducible eval har
 
 ```bash
 python3.12 -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev,notebook,tracking,api]"
+pip install -e ".[dev,notebook,tracking,api,rag]"
 python scripts/download_data.py --only urine   # needs ~/.kaggle/kaggle.json
 python scripts/download_data.py --only mirna_gse59856
-pytest                                         # all tests should pass
+pytest                                         # all tests should pass (no network needed)
 python -m pancreasignal.train --task pdac_vs_benign
 python -m pancreasignal.train --config configs/mirna.yaml --task pdac_vs_control
+
+# Guideline RAG: needs NVIDIA_API_KEY=... in .env (free key from build.nvidia.com)
+python scripts/download_corpus.py              # 20 open-license articles (Europe PMC)
+python scripts/build_rag_index.py              # chunks -> embeddings -> LanceDB
+python scripts/ask_rag.py "Is CA19-9 reliable in obstructive jaundice?"
+python scripts/eval_rag.py                     # 50 questions -> reports/*_rag_eval.json
+
 python scripts/make_results.py                 # rebuild RESULTS.md + the tables below
 ```
 
 ## Layout
 
 ```
-configs/            experiment configs (change values here, not in code)
-scripts/            data download, make_results.py (RESULTS.md + tables from reports/)
+configs/            experiment configs (change values here, not in code); rag.yaml, rag_corpus.yaml
+scripts/            data download, make_results.py (RESULTS.md + tables from reports/), RAG scripts
+evals/              rag_questions.yaml: 40 answerable + 10 out-of-corpus questions
 notebooks/          01 EDA, 02 urine results, 03 serum miRNA: logic lives in src/
 docs/figures/       plots used in this README
 src/pancreasignal/
@@ -34,7 +42,9 @@ src/pancreasignal/
   train.py          experiment runner -> reports/ (+ MLflow)
   reporting.py      read runs back from reports/
   explain.py        SHAP, coefficients, miRNA selection stability, batch checks
-  api/  agents/     Phase 6+
+  api/              FastAPI /predict (Phase 6)
+  rag/              guideline RAG (Phase 8): chunking, LanceDB index, cited answers + verifier, evaluation
+  agents/           Phase 9
 tests/              unit tests = definition of done
 ```
 
@@ -68,6 +78,18 @@ On the same patients, plasma CA19-9 is better: PDAC vs benign AUROC 0.890 vs 0.7
 | Elastic-net on serum miRNA | 1.000 (1.000–1.000) | 0.520 (0.444–0.603) | 0.999 (0.995–1.000) |
 
 Near-perfect scores appear only where the two groups were likely collected separately; pancreatic vs biliary cancer is at chance. Read this as a batch-effect warning, not a better test ([RESULTS.md](RESULTS.md) section 8, [notebook](notebooks/03_mirna.ipynb)).
+
+
+### Guideline RAG (Phase 8)
+
+| Metric | Value |
+|---|---|
+| Retrieval hit@3 (hybrid) | 1.00 |
+| Claims supported by cited sources | 99% |
+| Refused out-of-corpus questions (10) | 100% |
+| Fully correct answers (40) | 82% |
+
+Every sentence cites its source chunks; a second model call checks each sentence against the retrieved sources, numbers are checked in code, and out-of-corpus questions are refused. Details: [RESULTS.md](RESULTS.md) section 9.
 <!-- RESULTS:END -->
 
 **Model card:** [MODEL_CARD.md](MODEL_CARD.md) (intended use, data, limitations).

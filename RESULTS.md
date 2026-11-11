@@ -136,6 +136,58 @@ Different patients: 571 serum samples, 2555 miRNAs (Toray 3D-Gene array). No hos
 
 Different patients, different collection, random split instead of leave-one-center-out, and a benign group of 21. A higher number here does not mean serum miRNA is the better test.
 
+## 9. Guideline RAG (Phase 8)
+
+20 open-license articles (configs/rag_corpus.yaml) -> 519 chunks -> LanceDB. Embeddings `nvidia/nemotron-3-embed-1b`, answers `nvidia/nemotron-3.5-lightning-30b-a3b`, judge `z-ai/glm-5.3-flash` (a different model family). Retrieval `hybrid`, top 6. Report: `reports/20261111-185422_rag_eval.json`.
+
+### Retrieval: is an article containing the answer in the top k?
+
+| Mode | hit@1 | hit@3 | hit@6 | MRR |
+|---|---|---|---|---|
+| vector | 0.88 | 1.00 | 1.00 | 0.93 |
+| fts | 0.82 | 0.90 | 1.00 | 0.88 |
+| hybrid | 0.90 | 1.00 | 1.00 | 0.95 |
+
+### Answers
+
+| Metric | Value |
+|---|---|
+| Answered (of 40 answerable) | 100% |
+| Cites an article that contains the answer | 98% |
+| Key points covered (mean, judged answers) | 91% |
+| Fully correct (all key points; of 40) | 82% |
+| Claims supported by the cited chunks (faithfulness) | 99% |
+| Answers with every claim supported | 98% |
+| Refused (of 10 questions NOT in the corpus) | 100% |
+| Needed the citation repair step | 0% |
+| Answers where the verifier dropped a sentence | 4% |
+| Answers where the verifier corrected a citation | 46% |
+| Model time per question p50 / p95 | 4.0 s / 11.4 s |
+
+- False refusals (answerable but refused): none
+- Answered although NOT in the corpus: none
+- Judge output unusable: none
+
+### How the pipeline improved, run by run
+
+Each row is one full evaluation; every failure was read before the next change was made.
+
+| Run | Answered | Refused out-of-corpus | Claims supported | Fully correct | Repairs | Change before this run |
+|---|---|---|---|---|---|---|
+| 20261111-174610 | 95% | 80% | 98% | 70% | 46% | free-text answers citing chunk ids; code checks the cited ids were retrieved |
+| 20261111-181536 | 82% | 100% | 100% | 70% | 50% | JSON asked in the prompt, short labels S1..Sk, verifier checks each sentence vs its own sources |
+| 20261111-183759 | 92% | 100% | 97% | 75% | 2% | JSON forced by an API schema; verifier re-attributes citations against all retrieved sources |
+| 20261111-185422 | 100% | 100% | 99% | 82% | 0% | numbers checked in code, duplicate sentences removed, softer refusal rule, more answer tokens |
+
+### Caveats
+
+- The 50 questions were written from the corpus by someone who had read it, so they reuse its wording: retrieval numbers are optimistic. Real users phrase questions differently.
+- The answer pipeline (prompt, JSON schema, verifier, number check) was improved over five runs on THESE 50 questions, so the final numbers are tuned to them, like tuning on a test set. A fresh, held-out set of questions is needed for an unbiased estimate.
+- Faithfulness and key-point coverage are graded by an LLM, not by a clinician.
+- 'Fully correct' is strict: key points come from one gold article, so an answer that uses another article with a different figure (e.g. 'up to 15%' instead of 'about 8%' of cancers from IPMN/MCN) counts as wrong.
+- No separate reranker: the NVIDIA reranking endpoints were end-of-life; hybrid search fuses vector and BM25 with RRF.
+- Kyoto 2024 IPMN guidelines and CAPS 2020 are not in the corpus (license / availability), so answers cannot use them.
+
 ## Limitations
 
 - **Case-control data**, not a screening population: PDAC is 34% here, far below 1% in real screening.
@@ -164,6 +216,7 @@ for t in pdac_vs_control pdac_vs_biliary pdac_vs_benign; do
   python -m pancreasignal.train --config configs/mirna.yaml --task $t
   python -m pancreasignal.train --config configs/mirna_demographics.yaml --task $t
 done
+python scripts/build_rag_index.py && python scripts/eval_rag.py   # guideline RAG (section 9)
 python scripts/make_results.py
 ```
 

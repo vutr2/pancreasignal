@@ -9,11 +9,12 @@ README.md and MODEL_CARD.md are only changed between their <!-- RESULTS:START --
 """
 from __future__ import annotations
 
+import json
 import re
 
 import pandas as pd
 
-from pancreasignal.config import PROJECT_ROOT
+from pancreasignal.config import PROJECT_ROOT, REPORTS_DIR
 from pancreasignal.evaluation.metrics import paired_bootstrap_auroc_diff
 from pancreasignal.reporting import (
     MIRNA_TASKS,
@@ -55,6 +56,93 @@ def replace_block(path, block: str) -> None:
     if not re.search(pattern, text, flags=re.DOTALL):
         raise ValueError(f"{path.name} has no <!-- RESULTS:START --> / <!-- RESULTS:END --> markers")
     path.write_text(re.sub(pattern, lambda m: m.group(1) + block + m.group(2), text, flags=re.DOTALL))
+
+
+def rag_sections() -> tuple[list[str], list[str]]:
+    """(lines for RESULTS.md, lines for README) about the guideline RAG (Phase 8), from the newest
+    reports/*_rag_eval.json. Nothing if the evaluation was never run with answers."""
+    # Step 1: newest full evaluation (a --retrieval-only report has no 'summary')
+    reports = [p for p in sorted(REPORTS_DIR.glob("*_rag_eval.json")) if "summary" in json.loads(p.read_text())]
+    if not reports:
+        return [], []
+    rep = json.loads(reports[-1].read_text())
+    cfg, s, ret = rep["config"], rep["summary"], rep["retrieval"]
+    meta_path = PROJECT_ROOT / cfg["paths"]["index_dir"] / "index_meta.json"
+    n_chunks = json.loads(meta_path.read_text())["n_chunks"] if meta_path.exists() else "?"
+
+    def pct(x):
+        return "—" if x is None else f"{x:.0%}"
+
+    # Step 2: retrieval table (vector / BM25 / hybrid) and answer table
+    ret_rows = [[m, f"{r['hit@1']:.2f}", f"{r['hit@3']:.2f}", f"{r['hit@6']:.2f}", f"{r['mrr']:.2f}"]
+                for m, r in ret.items()]
+    ans_rows = [
+        [f"Answered (of {s['n_answerable']} answerable)", pct(s["answer_rate"])],
+        ["Cites an article that contains the answer", pct(s["cites_gold_article"])],
+        ["Key points covered (mean, judged answers)", pct(s["key_point_coverage"])],
+        [f"Fully correct (all key points; of {s['n_answerable']})", pct(s["fully_correct"])],
+        ["Claims supported by the cited chunks (faithfulness)", pct(s["claims_supported"])],
+        ["Answers with every claim supported", pct(s["answers_fully_supported"])],
+        [f"Refused (of {s['n_unanswerable']} questions NOT in the corpus)", pct(s["refusal_rate_unanswerable"])],
+        ["Needed the citation repair step", pct(s["repair_rate"])],
+        ["Answers where the verifier dropped a sentence", pct(s["answers_with_dropped_sentences"])],
+        ["Answers where the verifier corrected a citation", pct(s.get("answers_with_corrected_citation"))],
+        ["Model time per question p50 / p95", f"{s['model_time_p50_s']:.1f} s / {s['model_time_p95_s']:.1f} s"],
+    ]
+    misses = [f"- False refusals (answerable but refused): {', '.join(s['false_refusals']) or 'none'}",
+              f"- Answered although NOT in the corpus: {', '.join(s['answered_unanswerable']) or 'none'}",
+              f"- Judge output unusable: {', '.join(s['judge_failures']) or 'none'}"]
+
+    # Step 3: how the numbers moved across evaluation runs (every full report, oldest first)
+    changes = {  # what changed in the pipeline before each run (prose only; the numbers come from the reports)
+        "20261111-174610": "free-text answers citing chunk ids; code checks the cited ids were retrieved",
+        "20261111-181536": "JSON asked in the prompt, short labels S1..Sk, verifier checks each sentence vs its own sources",
+        "20261111-183759": "JSON forced by an API schema; verifier re-attributes citations against all retrieved sources",
+        "20261111-185422": "numbers checked in code, duplicate sentences removed, softer refusal rule, more answer tokens",
+    }
+    history = []
+    for path in reports:
+        hs = json.loads(path.read_text())["summary"]
+        stem = path.name.removesuffix("_rag_eval.json")
+        history.append([stem, pct(hs["answer_rate"]), pct(hs["refusal_rate_unanswerable"]), pct(hs["claims_supported"]),
+                        pct(hs["fully_correct"]), pct(hs["repair_rate"]), changes.get(stem, "—")])
+
+    results = [
+        "", "## 9. Guideline RAG (Phase 8)", "",
+        (f"20 open-license articles (configs/rag_corpus.yaml) -> {n_chunks} chunks -> LanceDB. Embeddings "
+         f"`{cfg['embedding']['model']}`, answers `{cfg['answer']['model']}`, judge `{cfg['judge']['model']}` "
+         f"(a different model family). Retrieval `{cfg['retrieval']['mode']}`, top {cfg['retrieval']['top_k']}. "
+         f"Report: `reports/{reports[-1].name}`."), "",
+        "### Retrieval: is an article containing the answer in the top k?", "",
+        *table(["Mode", "hit@1", "hit@3", "hit@6", "MRR"], ret_rows), "",
+        "### Answers", "", *table(["Metric", "Value"], ans_rows), "", *misses, "",
+        "### How the pipeline improved, run by run", "",
+        "Each row is one full evaluation; every failure was read before the next change was made.", "",
+        *table(["Run", "Answered", "Refused out-of-corpus", "Claims supported", "Fully correct", "Repairs", "Change before this run"],
+               history), "",
+        "### Caveats", "",
+        ("- The 50 questions were written from the corpus by someone who had read it, so they reuse its wording: "
+         "retrieval numbers are optimistic. Real users phrase questions differently."),
+        ("- The answer pipeline (prompt, JSON schema, verifier, number check) was improved over five runs on THESE "
+         "50 questions, so the final numbers are tuned to them, like tuning on a test set. A fresh, held-out set of "
+         "questions is needed for an unbiased estimate."),
+        "- Faithfulness and key-point coverage are graded by an LLM, not by a clinician.",
+        ("- 'Fully correct' is strict: key points come from one gold article, so an answer that uses another "
+         "article with a different figure (e.g. 'up to 15%' instead of 'about 8%' of cancers from IPMN/MCN) counts as wrong."),
+        "- No separate reranker: the NVIDIA reranking endpoints were end-of-life; hybrid search fuses vector and BM25 with RRF.",
+        "- Kyoto 2024 IPMN guidelines and CAPS 2020 are not in the corpus (license / availability), so answers cannot use them.",
+    ]
+    readme = [
+        "", "### Guideline RAG (Phase 8)", "",
+        *table(["Metric", "Value"], [[f"Retrieval hit@3 ({cfg['retrieval']['mode']})", f"{ret[cfg['retrieval']['mode']]['hit@3']:.2f}"],
+                                     ["Claims supported by cited sources", pct(s["claims_supported"])],
+                                     [f"Refused out-of-corpus questions ({s['n_unanswerable']})", pct(s["refusal_rate_unanswerable"])],
+                                     [f"Fully correct answers ({s['n_answerable']})", pct(s["fully_correct"])]]),
+        "", ("Every sentence cites its source chunks; a second model call checks each sentence against the retrieved "
+             "sources, numbers are checked in code, and out-of-corpus questions are refused. "
+             "Details: [RESULTS.md](RESULTS.md) section 9."), "",
+    ]
+    return results, readme
 
 
 def mirna_sections(mruns: pd.DataFrame, urine_res) -> tuple[list[str], list[str]]:
@@ -213,6 +301,8 @@ def main() -> None:
 
     # Step 4b: the serum miRNA model (Phase 5), a different cohort -> its own section
     mirna_results, mirna_readme = mirna_sections(mirna_runs, res)
+    # Step 4c: the guideline RAG (Phase 8), from its own evaluation report
+    rag_results, rag_readme = rag_sections()
 
     # Step 5: RESULTS.md, section by section
     L = [
@@ -292,6 +382,7 @@ def main() -> None:
 
     L += [
         *mirna_results,
+        *rag_results,
         "",
         "## Limitations",
         "",
@@ -326,6 +417,7 @@ def main() -> None:
         "  python -m pancreasignal.train --config configs/mirna.yaml --task $t",
         "  python -m pancreasignal.train --config configs/mirna_demographics.yaml --task $t",
         "done",
+        "python scripts/build_rag_index.py && python scripts/eval_rag.py   # guideline RAG (section 9)",
         "python scripts/make_results.py",
         "```",
         "",
@@ -358,6 +450,7 @@ def main() -> None:
         "![Calibration curves, PDAC vs benign](docs/figures/calibration_pdac_vs_benign.png)",
         "",
         *mirna_readme,
+        *rag_readme,
     ]
     replace_block(PROJECT_ROOT / "README.md", "\n".join(readme))
 

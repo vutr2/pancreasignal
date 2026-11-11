@@ -1,0 +1,188 @@
+# Corpus for the guideline RAG (Phase 8). Open-license articles only.
+#
+# Source: Europe PMC. Full text (XML) for each article:
+#   https://www.ebi.ac.uk/europepmc/webservices/rest/{pmcid}/fullTextXML
+# Chosen on 2026-11-11 from Europe PMC searches (open access, full text in Europe PMC, most-cited first),
+# one search per topic; the queries are listed at the bottom so the selection can be repeated.
+#
+# License policy: a free-to-read article is NOT enough; it must carry an open license.
+#   BY = credit the source (the RAG always cites), NC = non-commercial use only (personal portfolio: OK),
+#   ND = no derivatives (keep chunks verbatim, never publish rewritten versions of the article).
+# Excluded on purpose:
+#   - CAPS 2020 (Gut, PMC7295005): free to read in PMC but no license -> its recommendations come in through
+#     the open reviews below that summarise them.
+#   - Kyoto 2024 IPMN guidelines (Pancreatology, PMID 38182527): CC BY-NC-ND but not in PMC, so no XML
+#     full text via Europe PMC. Answers about Kyoto-specific criteria are therefore NOT supported.
+
+allowed_licenses: [cc0, cc by, cc by-sa, cc by-nc, cc by-nc-sa, cc by-nc-nd]
+
+articles:
+  # ---------------------------------------------------------------- CA19-9: use and limits
+  - pmcid: PMC7769746
+    title: "Carbohydrate antigen 19-9 - tumor marker: Past, present, and future"
+    journal: World J Gastrointest Surg
+    year: 2020
+    license: cc by-nc
+    topic: ca19_9
+    why: "Broad review of CA19-9: biology, uses in diagnosis and monitoring, and its main limitations."
+
+  - pmcid: PMC6280291
+    title: "Diagnostic Value of CA 19-9 and Carcinoembryonic Antigen for Pancreatic Cancer: A Meta-Analysis"
+    journal: Gastroenterol Res Pract
+    year: 2018
+    license: cc by
+    topic: ca19_9
+    why: "Pooled sensitivity and specificity of CA19-9 (vs CEA) for diagnosing pancreatic cancer."
+
+  - pmcid: PMC6987233
+    title: "CA19-9 for detecting recurrence of pancreatic cancer"
+    journal: Sci Rep
+    year: 2020
+    license: cc by
+    topic: ca19_9
+    why: "False negatives (CA19-9-negative patients), false positives in benign pancreatico-biliary disease, and CA19-9 for recurrence."
+
+  - pmcid: PMC7050983
+    title: "Lewis antigen-negative pancreatic cancer: An aggressive subgroup"
+    journal: Int J Oncol
+    year: 2020
+    license: cc by-nc-nd
+    topic: ca19_9
+    why: "About 5-10% of people are Lewis antigen negative and secrete little CA19-9: the main cause of false negatives."
+
+  - pmcid: PMC5968769
+    title: "Differential diagnostic roles of the serum CA19-9, total bilirubin (TBIL) and the ratio of CA19-9 to TBIL for benign and malignant"
+    journal: J Cancer
+    year: 2018
+    license: cc by-nc
+    topic: ca19_9
+    why: "Obstructive jaundice raises CA19-9 in benign disease too; CA19-9 relative to bilirubin helps (Phase 9 critic)."
+
+  - pmcid: PMC11239259
+    title: "A Significant Increase in the Serum Carbohydrate Antigen 19-9 Level Accompanied by Acute Cholecystitis and Choledocholithiasis: A Case Report and Review of the Literature"
+    journal: Intern Med
+    year: 2024
+    license: cc by-nc-nd
+    topic: ca19_9
+    why: "Extreme false positive: CA19-9 near 30,000 U/mL from benign biliary disease, with a literature review."
+
+  - pmcid: PMC10570677
+    title: "Diagnostic Performance of a Tumor Marker Gene Test to Personalize Serum CA19-9 Reference Ranges"
+    journal: Clin Cancer Res
+    year: 2023
+    license: cc by-nc-nd
+    topic: ca19_9
+    why: "FUT2/FUT3 gene variants change how much CA19-9 a person makes; personalised reference ranges."
+
+  # ---------------------------------------------------------------- Screening of high-risk individuals
+  - pmcid: PMC11223057
+    title: "Pancreatic Cancer Surveillance and Survival of High-Risk Individuals"
+    journal: JAMA Oncol
+    year: 2024
+    license: cc by
+    topic: high_risk_screening
+    why: "Outcomes of surveillance in high-risk individuals (CAPS programme): stage at detection and survival."
+
+  - pmcid: PMC9120399
+    title: "Long-term yield of pancreatic cancer surveillance in high-risk individuals"
+    journal: Gut
+    year: 2022
+    license: cc by
+    topic: high_risk_screening
+    why: "Long-term yield of surveillance in people with hereditary risk (>= 10% lifetime risk of PDAC)."
+
+  - pmcid: PMC10377815
+    title: "Overview of Pancreatic Cancer Epidemiology in Europe and Recommendations for Screening in High-Risk Populations"
+    journal: Cancers (Basel)
+    year: 2023
+    license: cc by
+    topic: high_risk_screening
+    why: "Who counts as high risk and how current recommendations say to screen them."
+
+  - pmcid: PMC8696234
+    title: "Early screening and diagnosis strategies of pancreatic cancer: a comprehensive review"
+    journal: Cancer Commun (Lond)
+    year: 2021
+    license: cc by-nc-nd
+    topic: high_risk_screening
+    why: "Broad review of early detection: risk groups, imaging, and blood biomarkers including CA19-9."
+
+  - pmcid: PMC9139708
+    title: "Imaging Modalities for Early Detection of Pancreatic Cancer: Current State and Future Research Opportunities"
+    journal: Cancers (Basel)
+    year: 2022
+    license: cc by
+    topic: high_risk_screening
+    why: "Strengths and limits of EUS, MRI/MRCP and CT for finding early pancreatic cancer."
+
+  - pmcid: PMC9563634
+    title: "Risk Factors for Pancreatic Cancer in Patients with New-Onset Diabetes: A Systematic Review and Meta-Analysis"
+    journal: Cancers (Basel)
+    year: 2022
+    license: cc by
+    topic: high_risk_screening
+    why: "New-onset diabetes as a high-risk group, and which additional risk factors raise the risk further."
+
+  - pmcid: PMC8144346
+    title: "Early prediction of pancreatic cancer from new-onset diabetes: an Associazione Italiana Oncologia Medica (AIOM)/Associazione Medici Diabetologi (AMD)/Società Italiana Endocrinologia (SIE)/Società Italiana Farmacologia (SIF) multidisciplinary consensus position paper"
+    journal: ESMO Open
+    year: 2021
+    license: cc by-nc-nd
+    topic: high_risk_screening
+    why: "Expert consensus on when new-onset diabetes should prompt a work-up for pancreatic cancer."
+
+  # ---------------------------------------------------------------- IPMN and pancreatic cysts
+  - pmcid: PMC5890653
+    title: "European evidence-based guidelines on pancreatic cystic neoplasms"
+    journal: Gut
+    year: 2018
+    license: cc by-nc
+    topic: ipmn
+    why: "The European guideline: diagnosis, indications for surgery and surveillance of IPMN and other cystic neoplasms."
+
+  - pmcid: PMC6710181
+    title: "Overview and comparison of guidelines for management of pancreatic cystic neoplasms"
+    journal: World J Gastroenterol
+    year: 2019
+    license: cc by-nc
+    topic: ipmn
+    why: "Side-by-side comparison of the main society guidelines for pancreatic cysts and where they disagree."
+
+  - pmcid: PMC8003622
+    title: "A Review of the Diagnosis and Management of Premalignant Pancreatic Cystic Lesions"
+    journal: J Clin Med
+    year: 2021
+    license: cc by
+    topic: ipmn
+    why: "IPMN and MCN as precursors of pancreatic cancer: how they are diagnosed and managed."
+
+  - pmcid: PMC8713311
+    title: "Pancreatic intraductal papillary mucinous neoplasms: Current diagnosis and management"
+    journal: World J Gastrointest Oncol
+    year: 2021
+    license: cc by-nc
+    topic: ipmn
+    why: "Main-duct, branch-duct and mixed IPMN: clinical presentation, imaging and treatment."
+
+  - pmcid: PMC6153570
+    title: "Management of Intraductal Papillary Mucinous Neoplasms: Controversies in Guidelines and Future Perspectives"
+    journal: Curr Treat Options Gastroenterol
+    year: 2018
+    license: cc by
+    topic: ipmn
+    why: "Where the IPMN guidelines conflict, and what that means for a given patient."
+
+  - pmcid: PMC7705592
+    title: "Factors Associated With the Risk of Progression of Low-Risk Branch-Duct Intraductal Papillary Mucinous Neoplasms"
+    journal: JAMA Netw Open
+    year: 2020
+    license: cc by
+    topic: ipmn
+    why: "Which patient and cyst factors predict progression to worrisome features or high-risk stigmata."
+
+# Europe PMC queries used (each + ' AND OPEN_ACCESS:y AND IN_EPMC:y AND HAS_FT:y', sorted by 'CITED desc'):
+#   ca19_9:              (TITLE:"CA19-9" OR TITLE:"CA 19-9" OR TITLE:"carbohydrate antigen 19-9") AND PUB_TYPE:"review" AND PUB_YEAR:[2015 TO 2026]
+#                        (TITLE_ABS:"CA19-9" OR TITLE_ABS:"CA 19-9") AND (TITLE_ABS:"false positive" OR TITLE_ABS:"Lewis" OR TITLE_ABS:"cholestasis" OR TITLE_ABS:"jaundice") AND (TITLE_ABS:"pancreatic" OR TITLE_ABS:"pancreas") AND PUB_YEAR:[2012 TO 2026]
+#   high_risk_screening: (TITLE:"pancreatic cancer" OR TITLE:"pancreatic ductal adenocarcinoma") AND (TITLE:"surveillance" OR TITLE:"screening" OR TITLE:"early detection") AND (TITLE_ABS:"high-risk" OR TITLE_ABS:"familial" OR TITLE_ABS:"germline") AND PUB_YEAR:[2018 TO 2026]
+#                        TITLE_ABS:"new-onset diabetes" AND (TITLE:"pancreatic cancer" OR TITLE:"pancreatic ductal adenocarcinoma") AND PUB_YEAR:[2018 TO 2026]
+#   ipmn:                (TITLE:"intraductal papillary mucinous" OR TITLE:"IPMN" OR TITLE:"pancreatic cystic" OR TITLE:"pancreatic cyst") AND (TITLE_ABS:"guideline" OR TITLE_ABS:"management" OR TITLE_ABS:"surveillance") AND PUB_YEAR:[2018 TO 2026]

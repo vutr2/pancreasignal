@@ -14,5 +14,127 @@
       "GPL18941.txt": "00aad3791d3be541a28e04893c4c28ba9eb2c94c414cb8999d55282299d8a01b",
       "GSE59856_series_matrix.txt.gz": "6f7d2e1a1119960d94837680e276afd410238f9ae4be9b2fc236060ea1930fce"
     }
+  },
+  "guidelines": {
+    "PMC7769746": {
+      "title": "Carbohydrate antigen 19-9 - tumor marker: Past, present, and future",
+      "license": "cc by-nc",
+      "url": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC7769746/fullTextXML",
+      "sha256": "ef4a76f1657576ad14ad7430499cbe6bb846ad38ce91fe62a18d8dd93da4154f"
+    },
+    "PMC6280291": {
+      "title": "Diagnostic Value of CA 19-9 and Carcinoembryonic Antigen for Pancreatic Cancer: A Meta-Analysis",
+      "license": "cc by",
+      "url": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC6280291/fullTextXML",
+      "sha256": "315b977e1ad1cf5b38d66eea2c0d2d1a7f86b4ba783267dbbc647f9c5c42adda"
+    },
+    "PMC6987233": {
+      "title": "CA19-9 for detecting recurrence of pancreatic cancer",
+      "license": "cc by",
+      "url": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC6987233/fullTextXML",
+      "sha256": "33e9c24b446aba7385207224dd5cbefa6e173ffe1ccb407c77e28121c012aa94"
+    },
+    "PMC7050983": {
+      "title": "Lewis antigen-negative pancreatic cancer: An aggressive subgroup",
+      "license": "cc by-nc-nd",
+      "url": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC7050983/fullTextXML",
+      "sha256": "8d64f7d969524a6f51fea44aa021b49332e94e76ee3816a7d4c8e99ddcbbd60c"
+    },
+    "PMC5968769": {
+      "title": "Differential diagnostic roles of the serum CA19-9, total bilirubin (TBIL) and the ratio of CA19-9 to TBIL for benign and malignant",
+      "license": "cc by-nc",
+      "url": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC5968769/fullTextXML",
+      "sha256": "1b774182657734af615bd0c4adf301fdf366e2b514671082ea57b41f5a28d4eb"
+    },
+    "PMC11239259": {
+      "title": "A Significant Increase in the Serum Carbohydrate Antigen 19-9 Level Accompanied by Acute Cholecystitis and Choledocholithiasis: A Case Report and Review of the Literature",
+      "license": "cc by-nc-nd",
+      "url": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC11239259/fullTextXML",
+      "sha256": "63c3eefe5ed54a16e421fc11ad107e92617ea8552592db672d69d8063a68fa6f"
+    },
+    "PMC10570677": {
+      "title": "Diagnostic Performance of a Tumor Marker Gene Test to Personalize Serum CA19-9 Reference Ranges",
+      "license": "cc by-nc-nd",
+      "url": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC10570677/fullTextXML",
+      "sha256": "803063b161d644dc2d1fef62640ed4650237896af1e183634b6e6edad85a644f"
+    },
+    "PMC11223057": {
+      "title": "Pancreatic Cancer Surveillance and Survival of High-Risk Individuals",
+      "license": "cc by",
+      "url": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC11223057/fullTextXML",
+      "sha256": "9c547c18e2909c2cc7de39b0f3c439c56aa3c5442429865c7f651be2ae0ed606"
+    },
+    "PMC9120399": {
+      "title": "Long-term yield of pancreatic cancer surveillance in high-risk individuals",
+      "license": "cc by",
+      "url": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC9120399/fullTextXML",
+      "sha256": "85f92849c328918d0d6ceaa16e5c0c722d5deb41527fa77ee81ff38ba164b0c6"
+    },
+    "PMC10377815": {
+      "title": "Overview of Pancreatic Cancer Epidemiology in Europe and Recommendations for Screening in High-Risk Populations",
+      "license": "cc by",
+      "url": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC10377815/fullTextXML",
+      "sha256": "264f41b27a04d153bf5afa4cf650c419fcb51c9dfce00f33818da13d7ffe75b7"
+    },
+    "PMC8696234": {
+      "title": "Early screening and diagnosis strategies of pancreatic cancer: a comprehensive review",
+      "license": "cc by-nc-nd",
+      "url": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC8696234/fullTextXML",
+      "sha256": "5884f3199c72e9d80224c42ac05b1d7c5fa99691e405c68eba317a5744918648"
+    },
+    "PMC9139708": {
+      "title": "Imaging Modalities for Early Detection of Pancreatic Cancer: Current State and Future Research Opportunities",
+      "license": "cc by",
+      "url": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC9139708/fullTextXML",
+      "sha256": "e96b18e5737d7fe488bab9b6e7b23d02aac25293527a044c242663e834e1e939"
+    },
+    "PMC9563634": {
+      "title": "Risk Factors for Pancreatic Cancer in Patients with New-Onset Diabetes: A Systematic Review and Meta-Analysis",
+      "license": "cc by",
+      "url": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC9563634/fullTextXML",
+      "sha256": "3d12b19e0af2e28630194ecc0df925337a941bc8877a782a5fdf3e272cb59c2f"
+    },
+    "PMC8144346": {
+      "title": "Early prediction of pancreatic cancer from new-onset diabetes: an Associazione Italiana Oncologia Medica (AIOM)/Associazione Medici Diabetologi (AMD)/Societ\u00e0 Italiana Endocrinologia (SIE)/Societ\u00e0 Italiana Farmacologia (SIF) multidisciplinary consensus position paper",
+      "license": "cc by-nc-nd",
+      "url": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC8144346/fullTextXML",
+      "sha256": "5a72243c97c57cc911e411d5fdf5fe4572b493ed05782f768b36f8edd2d995ff"
+    },
+    "PMC5890653": {
+      "title": "European evidence-based guidelines on pancreatic cystic neoplasms",
+      "license": "cc by-nc",
+      "url": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC5890653/fullTextXML",
+      "sha256": "65737d8f5722fa7840a2211e1f085d3daea56a195a2f9aac0b753d295d0a3ef3"
+    },
+    "PMC6710181": {
+      "title": "Overview and comparison of guidelines for management of pancreatic cystic neoplasms",
+      "license": "cc by-nc",
+      "url": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC6710181/fullTextXML",
+      "sha256": "48a089f6b09160e2e5f0a30f8b49aa11f23beb0194faa2389b4b558c9ffdf84d"
+    },
+    "PMC8003622": {
+      "title": "A Review of the Diagnosis and Management of Premalignant Pancreatic Cystic Lesions",
+      "license": "cc by",
+      "url": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC8003622/fullTextXML",
+      "sha256": "420008a176110a40bab94900c584595c396772580c98493309d4d441e9951e94"
+    },
+    "PMC8713311": {
+      "title": "Pancreatic intraductal papillary mucinous neoplasms: Current diagnosis and management",
+      "license": "cc by-nc",
+      "url": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC8713311/fullTextXML",
+      "sha256": "f162329ec155aab6b1c32da76fa1d14b38e8d9d57a4adb6a1c75aca0b463565b"
+    },
+    "PMC6153570": {
+      "title": "Management of Intraductal Papillary Mucinous Neoplasms: Controversies in Guidelines and Future Perspectives",
+      "license": "cc by",
+      "url": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC6153570/fullTextXML",
+      "sha256": "1dd762b759203d53028a5c9e81c1d24a6da757a66da540fbc22ffa1c52d4918e"
+    },
+    "PMC7705592": {
+      "title": "Factors Associated With the Risk of Progression of Low-Risk Branch-Duct Intraductal Papillary Mucinous Neoplasms",
+      "license": "cc by",
+      "url": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC7705592/fullTextXML",
+      "sha256": "a32a01a7f5afbbe1cc3ab79c29e2ed22de7fdbed0fed4a36f0c10e59ca378ed6"
+    }
   }
 }

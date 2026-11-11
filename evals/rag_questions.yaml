@@ -1,0 +1,343 @@
+# Evaluation set for the guideline RAG (Phase 8). Written 2026-11-11 from the corpus text itself
+# (configs/rag_corpus.yaml): every answerable question was checked against the chunk that answers it.
+#
+#   answerable  : gold_pmcids = article(s) that contain the answer (retrieval must find one of them)
+#                 key_points  = facts a correct answer must contain (graded by the judge model)
+#   unanswerable: NOT in the corpus (checked by keyword search over all chunks) -> the system must refuse
+#
+# Used by: python scripts/eval_rag.py
+
+questions:
+  # ---------------------------------------------------------------- CA19-9 (14)
+  - id: q01
+    type: answerable
+    topic: ca19_9
+    question: Who first described CA19-9, and when?
+    gold_pmcids: [PMC7769746]
+    key_points: ["Koprowski", "1979"]
+
+  - id: q02
+    type: answerable
+    topic: ca19_9
+    question: Apart from pancreatic cancer, which biliary tract cancer is CA19-9 used as an adjunct to diagnose?
+    gold_pmcids: [PMC7769746]
+    key_points: ["cholangiocarcinoma"]
+
+  - id: q03
+    type: answerable
+    topic: ca19_9
+    question: How does CA19-9 compare with CEA for diagnosing pancreatic cancer in meta-analysis?
+    gold_pmcids: [PMC6280291]
+    key_points: ["CA19-9 has higher sensitivity than CEA", "CA19-9 has a higher diagnostic odds ratio or AUC", "no significant difference in specificity"]
+
+  - id: q04
+    type: answerable
+    topic: ca19_9
+    question: What are the two kinds of errors that limit CA19-9 as a biomarker for pancreatic cancer?
+    gold_pmcids: [PMC6987233, PMC7769746]
+    key_points: ["false negatives in patients who do not produce CA19-9", "false positives in benign pancreatico-biliary disease"]
+
+  - id: q05
+    type: answerable
+    topic: ca19_9
+    question: What proportion of people are Lewis antigen negative, and what does that mean for CA19-9?
+    gold_pmcids: [PMC7050983]
+    key_points: ["about 5-10%", "they secrete little or no CA19-9"]
+
+  - id: q06
+    type: answerable
+    topic: ca19_9
+    question: How do Lewis antigen-negative pancreatic cancer patients differ in outcome from Lewis-positive patients?
+    gold_pmcids: [PMC7050983]
+    key_points: ["poorer outcome or survival", "higher metastatic rate"]
+
+  - id: q07
+    type: answerable
+    topic: ca19_9
+    question: In obstructive jaundice, does the ratio of CA19-9 to bilirubin distinguish malignant from benign causes better than CA19-9 alone?
+    gold_pmcids: [PMC5968769]
+    key_points: ["yes, the ratio performs better", "AUC about 0.889 for the ratio vs 0.815 for CA19-9 alone"]
+
+  - id: q08
+    type: answerable
+    topic: ca19_9
+    question: Can benign biliary disease raise CA19-9 to very high levels? Give an example.
+    gold_pmcids: [PMC11239259, PMC7769746]
+    key_points: ["yes", "acute cholecystitis and choledocholithiasis with CA19-9 of 29,512 U/mL", "level returned to normal after treatment"]
+
+  - id: q09
+    type: answerable
+    topic: ca19_9
+    question: Which genes influence how much CA19-9 a person synthesizes?
+    gold_pmcids: [PMC10570677]
+    key_points: ["FUT3", "FUT2"]
+
+  - id: q10
+    type: answerable
+    topic: ca19_9
+    question: How much did personalising CA19-9 reference ranges with a FUT gene test improve diagnostic accuracy for PDAC?
+    gold_pmcids: [PMC10570677]
+    key_points: ["AUC improved from 0.84 to 0.92"]
+
+  - id: q11
+    type: answerable
+    topic: ca19_9
+    question: With FUT-personalised cutoffs, what specificity did CA19-9 reach compared with the standard cutoff?
+    gold_pmcids: [PMC10570677]
+    key_points: ["98.9% specificity with personalised cutoffs", "91.4% with the standard cutoff"]
+
+  - id: q12
+    type: answerable
+    topic: ca19_9
+    question: How does the preoperative CA19-9 level relate to survival after resection of pancreatic cancer?
+    gold_pmcids: [PMC7769746]
+    key_points: ["higher preoperative CA19-9 predicts poorer survival", "below 37 U/mL: best median survival (35 months)", "above 200 U/mL: shortest survival (16 months)"]
+
+  - id: q13
+    type: answerable
+    topic: ca19_9
+    question: What share of stage III-IV pancreatic cancer patients have CA19-9 above 100 U/mL?
+    gold_pmcids: [PMC7769746]
+    key_points: ["80-90%"]
+
+  - id: q14
+    type: answerable
+    topic: ca19_9
+    question: Which three urinary proteins were identified as a panel for pancreatic cancer diagnosis, and how well did the panel perform for stage I-II disease?
+    gold_pmcids: [PMC8696234]
+    key_points: ["LYVE-1, REG1A and TFF1", "AUC 0.90 for stage I-II PDAC vs healthy", "AUC 0.97 when combined with plasma CA19-9"]
+
+  # ---------------------------------------------------------------- Screening of high-risk individuals (13)
+  - id: q15
+    type: answerable
+    topic: high_risk_screening
+    question: Did surveillance of high-risk individuals in the CAPS program find pancreatic cancer at an earlier stage than in matched controls?
+    gold_pmcids: [PMC11223057]
+    key_points: ["yes, a higher proportion of stage I cancers", "smaller tumours than in matched SEER controls"]
+
+  - id: q16
+    type: answerable
+    topic: high_risk_screening
+    question: How did 5-year survival and pancreatic cancer mortality compare between surveilled high-risk individuals and matched controls?
+    gold_pmcids: [PMC11223057]
+    key_points: ["5-year survival 50% vs 9%", "pancreatic cancer mortality 43% vs 86%"]
+
+  - id: q17
+    type: answerable
+    topic: high_risk_screening
+    question: In long-term surveillance, what was the cumulative PDAC incidence in gene mutation carriers compared with mutation-negative familial pancreatic cancer kindreds?
+    gold_pmcids: [PMC9120399]
+    key_points: ["9.3% in mutation carriers", "0% in mutation-negative familial kindreds"]
+
+  - id: q18
+    type: answerable
+    topic: high_risk_screening
+    question: In surveillance of high-risk individuals, which imaging method detected more solid pancreatic lesions, EUS or MRI/MRCP?
+    gold_pmcids: [PMC9120399]
+    key_points: ["EUS", "EUS detected all solid lesions vs 22% for MRI/MRCP"]
+
+  - id: q19
+    type: answerable
+    topic: high_risk_screening
+    question: Which lifetime risk threshold and surveillance schedule were used in the Dutch long-term high-risk surveillance study?
+    gold_pmcids: [PMC9120399]
+    key_points: ["estimated lifetime PDAC risk of 10% or more", "annual surveillance with both EUS and MRI/MRCP"]
+
+  - id: q20
+    type: answerable
+    topic: high_risk_screening
+    question: How much does having first-degree relatives with pancreatic cancer increase a person's risk?
+    gold_pmcids: [PMC10377815]
+    key_points: ["about 9-fold with at least one first-degree relative", "about 32-fold with at least three first-degree relatives"]
+
+  - id: q21
+    type: answerable
+    topic: high_risk_screening
+    question: Which groups does Cancer Research UK recommend screening for pancreatic cancer?
+    gold_pmcids: [PMC10377815]
+    key_points: ["hereditary pancreatitis (PRSS1)", "Peutz-Jeghers syndrome", "first-degree relatives of patients", "BRCA1, BRCA2, PALB2 or CDKN2A carriers"]
+
+  - id: q22
+    type: answerable
+    topic: high_risk_screening
+    question: Is population-wide screening for pancreatic cancer recommended?
+    gold_pmcids: [PMC10377815, PMC11223057]
+    key_points: ["no, population screening is not recommended", "screening is recommended only for high-risk groups"]
+
+  - id: q23
+    type: answerable
+    topic: high_risk_screening
+    question: What is described as the gold standard for diagnosing pancreatic cancer in the comprehensive review of early screening strategies?
+    gold_pmcids: [PMC8696234]
+    key_points: ["EUS-guided fine-needle aspiration (EUS-FNA)"]
+
+  - id: q24
+    type: answerable
+    topic: high_risk_screening
+    question: What proportion of patients with pancreatic cancer are not suitable for potentially curative surgery at diagnosis, and why?
+    gold_pmcids: [PMC9139708]
+    key_points: ["about 85%", "locally advanced or metastatic disease at diagnosis"]
+
+  - id: q25
+    type: answerable
+    topic: high_risk_screening
+    question: What fraction of new-onset diabetes cases are caused by pancreatic cancer, and why does that matter for screening?
+    gold_pmcids: [PMC9563634]
+    key_points: ["less than 1%", "testing everyone with new-onset diabetes gives an unfavourable risk/benefit balance, so extra risk factors are needed"]
+
+  - id: q26
+    type: answerable
+    topic: high_risk_screening
+    question: Among patients with new-onset diabetes, which additional factors most increase the risk of pancreatic cancer?
+    gold_pmcids: [PMC9563634]
+    key_points: ["pancreatitis", "family history of pancreatic cancer", "weight loss", "gallstones, rising glycaemia or insulin use"]
+
+  - id: q27
+    type: answerable
+    topic: high_risk_screening
+    question: Do the Italian AIOM/AMD consensus experts recommend screening all asymptomatic adults with new-onset diabetes for pancreatic cancer?
+    gold_pmcids: [PMC8144346]
+    key_points: ["no, not recommended in asymptomatic adults", "hyperglycaemia is far more common than pancreatic cancer and there is no safe, affordable screening test"]
+
+  # ---------------------------------------------------------------- IPMN and pancreatic cysts (13)
+  - id: q28
+    type: answerable
+    topic: ipmn
+    question: According to the European evidence-based guidelines, which IPMN findings are absolute indications for surgery?
+    gold_pmcids: [PMC5890653]
+    key_points: ["jaundice", "enhancing mural nodule larger than 5 mm", "main pancreatic duct diameter of 10 mm or more"]
+
+  - id: q29
+    type: answerable
+    topic: ipmn
+    question: What are relative indications for surgery in IPMN according to the European guidelines?
+    gold_pmcids: [PMC5890653]
+    key_points: ["main pancreatic duct 5 to 9.9 mm", "cyst diameter 40 mm or more"]
+
+  - id: q30
+    type: answerable
+    topic: ipmn
+    question: When does the European guideline recommend conservative management of MCN and IPMN?
+    gold_pmcids: [PMC5890653]
+    key_points: ["asymptomatic lesions", "smaller than 40 mm", "without an enhancing nodule"]
+
+  - id: q31
+    type: answerable
+    topic: ipmn
+    question: How long should patients with IPMN be followed up according to the European guideline?
+    gold_pmcids: [PMC5890653]
+    key_points: ["lifelong follow-up", "in patients who are fit for surgery"]
+
+  - id: q32
+    type: answerable
+    topic: ipmn
+    question: How does cyst growth rate change the risk of malignancy in IPMN?
+    gold_pmcids: [PMC5890653]
+    key_points: ["growth of more than 2 mm/year in BD-IPMN under 30 mm: 45% 5-year malignancy risk", "growth over 5 mm/year (or 10 mm in total): about 20-fold higher risk"]
+
+  - id: q33
+    type: answerable
+    topic: ipmn
+    question: Which five guidelines for pancreatic cystic neoplasms are compared in the overview article?
+    gold_pmcids: [PMC6710181]
+    key_points: ["AGA 2015", "IAP 2017", "ACG 2018", "European Study Group", "American College of Radiology"]
+
+  - id: q34
+    type: answerable
+    topic: ipmn
+    question: Approximately what proportion of pancreatic cancers arise from IPMN or MCN?
+    gold_pmcids: [PMC8003622]
+    key_points: ["about 8%"]
+
+  - id: q35
+    type: answerable
+    topic: ipmn
+    question: Which cyst fluid molecular markers are mentioned for the diagnosis of pancreatic cysts?
+    gold_pmcids: [PMC8003622]
+    key_points: ["KRAS", "GNAS", "at least two of VHL, PIK3CA, SMAD4, TP53"]
+
+  - id: q36
+    type: answerable
+    topic: ipmn
+    question: What share of pancreatic neoplasms and of cystic neoplasms are IPMNs, and what are the three types?
+    gold_pmcids: [PMC8713311]
+    key_points: ["about 1% of pancreatic neoplasms", "about 25% of cystic neoplasms", "main duct, branch duct and mixed type"]
+
+  - id: q37
+    type: answerable
+    topic: ipmn
+    question: Which imaging test is most useful for IPMN, and what is recommended for main-duct IPMN?
+    gold_pmcids: [PMC8713311]
+    key_points: ["MRI", "surgery for main-duct IPMN"]
+
+  - id: q38
+    type: answerable
+    topic: ipmn
+    question: Which factors were associated with progression of low-risk branch-duct IPMN under surveillance?
+    gold_pmcids: [PMC7705592]
+    key_points: ["initial cyst size above 15 mm", "body mass index above 26.4", "heavy smoking"]
+
+  - id: q39
+    type: answerable
+    topic: ipmn
+    question: What was the probability of progression of low-risk branch-duct IPMN at 1, 5 and 10 years?
+    gold_pmcids: [PMC7705592]
+    key_points: ["3.7% at 1 year", "23.4% at 5 years", "43.3% at 10 years"]
+
+  - id: q40
+    type: answerable
+    topic: ipmn
+    question: How often are pancreatic cysts detected on modern imaging, and what fraction of them are IPMNs?
+    gold_pmcids: [PMC6153570]
+    key_points: ["up to 45% detection rate", "24-82% are IPMNs"]
+
+  # ---------------------------------------------------------------- Not in the corpus (10): must refuse
+  - id: u01
+    type: unanswerable
+    topic: out_of_scope
+    question: What is the recommended starting dose of gemcitabine for metastatic pancreatic cancer?
+
+  - id: u02
+    type: unanswerable
+    topic: out_of_scope
+    question: Which worrisome features did the Kyoto 2024 IPMN guidelines add or change compared with earlier guidelines?
+
+  - id: u03
+    type: unanswerable
+    topic: out_of_scope
+    question: What HbA1c target is recommended for adults with type 2 diabetes?
+
+  - id: u04
+    type: unanswerable
+    topic: out_of_scope
+    question: What is the 5-year survival after pancreaticoduodenectomy for ampullary carcinoma?
+
+  - id: u05
+    type: unanswerable
+    topic: out_of_scope
+    question: What is the sensitivity of CT colonography for detecting colorectal polyps of 10 mm or larger?
+
+  - id: u06
+    type: unanswerable
+    topic: out_of_scope
+    question: How often should patients with non-dysplastic Barrett's oesophagus undergo endoscopic surveillance?
+
+  - id: u07
+    type: unanswerable
+    topic: out_of_scope
+    question: What daily aspirin dose is recommended to prevent colorectal cancer?
+
+  - id: u08
+    type: unanswerable
+    topic: out_of_scope
+    question: Which radiation dose is used for stereotactic body radiotherapy of locally advanced pancreatic cancer?
+
+  - id: u09
+    type: unanswerable
+    topic: out_of_scope
+    question: What is the recommended hepatitis B vaccination schedule for adults?
+
+  - id: u10
+    type: unanswerable
+    topic: out_of_scope
+    question: Which anticoagulant is recommended for cancer-associated venous thromboembolism in pancreatic cancer?

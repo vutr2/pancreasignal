@@ -152,7 +152,14 @@ File: `src/pancreasignal/evaluation/splits.py`, `src/pancreasignal/evaluation/me
 
 ---
 
-## Phase 7: Intake agent: đọc phiếu xét nghiệm (1 tuần)
+## Phase 7: Intake agent: đọc phiếu xét nghiệm (1 tuần): ⏭️ BỎ QUA (2026-11-11)
+
+> **Lý do bỏ qua:** không bắt buộc cho các phase sau. MedGemma không gọi được qua Hugging Face Inference Providers,
+> và gọi model đọc ảnh qua API thì tốn credit (tài khoản trả về 402). Các marker LYVE1/REG1B/TFF1 cũng không có
+> trên phiếu xét nghiệm thật, nên phiếu nào cũng phải tự tạo.
+> **Ảnh hưởng:** Phase 9 nhận input **có cấu trúc (JSON kèm đơn vị)**, đúng như API Phase 6 đã nhận. Phần
+> "0 lỗi đổi đơn vị" đã được đảm bảo ở mức API bằng `tests/test_units.py`.
+> Có thể quay lại làm sau (danh sách gốc ở dưới).
 
 - [ ] `brew install ollama` → pull MedGemma 1.5 4B bản GGUF
 - [ ] Tạo **tập test 50–100 phiếu xét nghiệm**: dùng mẫu phiếu thật (đã xoá thông tin cá nhân) điền giá trị từ dataset. Ghi rõ trong README là ảnh tổng hợp, chỉ dùng để test
@@ -164,10 +171,11 @@ File: `src/pancreasignal/evaluation/splits.py`, `src/pancreasignal/evaluation/me
 
 ## Phase 8: Guideline RAG (1 tuần)
 
-- [ ] Corpus: các bài open-access trên PMC về CA19-9 (giới hạn, nguyên nhân dương tính giả), CAPS 2020 (sàng lọc nhóm nguy cơ cao), Kyoto 2024 (IPMN). **Chỉ dùng bài open-access.**
-- [ ] Postgres + pgvector (Docker) + BM25, embedding MedCPT + reranker
-- [ ] Bắt buộc trích dẫn nguồn; agent từ chối trả lời nếu không có nguồn
-- [ ] Bộ 50 câu hỏi có đáp án (tự viết từ guideline) → đo retrieval recall@k + faithfulness
+- [x] Corpus: **20 bài có license mở** (`configs/rag_corpus.yaml`): CA19-9, sàng lọc nhóm nguy cơ cao, IPMN. **CAPS 2020 và Kyoto 2024 bị loại**: CAPS không có license, Kyoto không có trên PMC.
+- [x] ~~Postgres + pgvector (Docker)~~ **LanceDB** (không cần Docker hay server): vector + BM25 + hybrid (RRF). ~~MedCPT~~ → embedding **`nvidia/nemotron-3-embed-1b`** (không phải cài PyTorch). ~~Reranker~~ → các endpoint reranker của NVIDIA đã ngừng hoạt động (410), nên dùng RRF của hybrid thay thế
+- [x] LLM qua **NVIDIA API**: trả lời bằng `nemotron-3.5-lightning` (tắt chế độ suy nghĩ), chấm điểm bằng `glm-5.3-flash` (họ model khác). Mọi lần gọi đều có cache. Đã gọi thử từng model: phần lớn model trong danh mục trả 404 hoặc treo
+- [x] Bắt buộc trích dẫn (trả lời bằng JSON, mỗi câu kèm nhãn nguồn) + **bước kiểm chứng** từng câu với nguồn của chính nó; từ chối khi không đủ bằng chứng. Kiểm tra trong code, không chỉ dựa vào prompt
+- [x] Bộ 50 câu hỏi (`evals/rag_questions.yaml`: 40 câu trả lời được, 10 câu ngoài corpus) → hit@k, MRR, faithfulness, tỉ lệ từ chối. Kết quả: RESULTS.md mục 9
 
 ---
 

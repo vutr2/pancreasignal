@@ -1,0 +1,59 @@
+# Guideline RAG (Phase 8). Change models / sizes here, not in code.
+#
+#   python scripts/build_rag_index.py          # XML -> chunks -> embeddings -> LanceDB
+#   python scripts/ask_rag.py "Is CA19-9 reliable in obstructive jaundice?"
+#   python scripts/eval_rag.py                 # 50 questions -> reports/rag_eval_*.json
+#
+# Model availability was CHECKED by calling each one on 2026-11-11 (NVIDIA API catalog, free tier).
+# Many models listed by /v1/models answer 404 or time out, and the rerankers are end-of-life (410),
+# so swap a name here if a call starts failing. Every call is cached in paths.cache_dir.
+
+name: rag_v1
+corpus: configs/rag_corpus.yaml
+
+paths:
+  raw_dir: data/raw/guidelines
+  chunks: data/processed/rag_chunks.jsonl
+  index_dir: data/processed/lancedb
+  cache_dir: data/cache/llm          # every LLM / embedding response, keyed by a hash of the request
+  questions: evals/rag_questions.yaml
+
+llm:                                  # any OpenAI-compatible API (NVIDIA, Ollama, vLLM...)
+  base_url: https://integrate.api.nvidia.com/v1
+  api_key_env: NVIDIA_API_KEY         # read from .env in the project root
+  timeout_s: 90
+
+embedding:
+  model: nvidia/nemotron-3-embed-1b   # 2048-dim, unit-length vectors
+  # asymmetric model: questions and passages are embedded differently (same text: cosine 0.87)
+  query_input_type: query
+  passage_input_type: passage
+  extra_body: {truncate: END}
+  batch_size: 32
+
+answer:
+  model: nvidia/nemotron-3.5-lightning-30b-a3b
+  max_tokens: 1500                  # 700 cut a long JSON answer in half (q26)
+  temperature: 0.0
+  # reasoning model: with thinking on, 200 tokens of "thinking" and no answer (26 s vs 0.6 s)
+  extra_body: {chat_template_kwargs: {enable_thinking: false}}
+
+judge:                                # a DIFFERENT model family, so it does not grade its own style
+  model: z-ai/glm-5.3-flash
+  # GLM always "thinks" before answering on this API (enable_thinking=False, thinking.type=disabled:
+  # both ignored, tested). With 1500 tokens a long grading ran out mid-thought and returned nothing,
+  # so give it room and time. mistral-large-4 was tried as judge: 59 s per call, unusable.
+  max_tokens: 4000
+  timeout_s: 300
+  temperature: 0.0
+  extra_body: {}
+
+retrieval:
+  mode: hybrid                        # vector | fts (BM25) | hybrid (vector + BM25 fused by RRF)
+  top_k: 6                            # chunks given to the answer model
+  # no separate reranker: the NVIDIA reranking endpoints are end-of-life; RRF fusion replaces it
+
+chunking:                             # see src/pancreasignal/rag/chunking.py
+  target_words: 300
+  max_words: 450
+  min_words: 15
