@@ -1,0 +1,64 @@
+# Synthetic cases for the Phase 9 agent. NOT real patients.
+# Urine values are close to the group medians found in the EDA (notebooks/01_eda.ipynb):
+#   control LYVE1 0.15, REG1B 17.6, TFF1 59.8 ng/mL; PDAC LYVE1 5.6, REG1B 123, TFF1 723 ng/mL; creatinine ~0.7 mg/mL
+# `expect` = what the critic must decide (used by tests/test_agent.py and scripts/run_agent.py --all).
+#
+#   python scripts/run_agent.py --case c03            # one case, you review it in the terminal
+#   python scripts/run_agent.py --all --auto-approve  # every case, approved automatically
+
+cases:
+  - case_id: c01_low_risk
+    note: control-like urine values, no clinical flags
+    urine: {lyve1: {value: 0.15, unit: ng/mL}, reg1b: {value: 17.6, unit: ng/mL}, tff1: {value: 59.8, unit: ng/mL},
+            creatinine: {value: 62.8, unit: mg/dL}, age: 56, sex: F}
+    clinical: {}
+    expect: {decision: proceed, findings: []}
+
+  - case_id: c02_high_risk_diabetes
+    note: PDAC-like urine values + new-onset diabetes (a high-risk group)
+    urine: {lyve1: {value: 5.6, unit: ng/mL}, reg1b: {value: 123, unit: ng/mL}, tff1: {value: 723, unit: ng/mL},
+            creatinine: {value: 6.4, unit: mmol/L}, age: 67, sex: M}
+    clinical: {new_onset_diabetes: true}
+    expect: {decision: proceed, findings: [NEW_ONSET_DIABETES]}
+
+  - case_id: c03_jaundice_high_ca199
+    note: obstructive jaundice; plasma CA19-9 is high but may be a false positive
+    urine: {lyve1: {value: 1.2, unit: ng/mL}, reg1b: {value: 20.2, unit: ng/mL}, tff1: {value: 210, unit: ng/mL},
+            creatinine: {value: 0.75, unit: mg/mL}, age: 62, sex: M}
+    clinical: {jaundice: true, total_bilirubin: {value: 8.5, unit: mg/dL}, plasma_ca19_9: {value: 940, unit: U/mL}}
+    expect: {decision: proceed, findings: [CHOLESTASIS_CA199]}
+
+  - case_id: c04_ca199_undetectable
+    note: CA19-9 almost zero (possibly Lewis negative)
+    urine: {lyve1: {value: 3.1, unit: ng/mL}, reg1b: {value: 80, unit: ng/mL}, tff1: {value: 500, unit: ng/mL},
+            creatinine: {value: 0.9, unit: mg/mL}, age: 70, sex: F}
+    clinical: {plasma_ca19_9: {value: 1, unit: kU/L}}
+    expect: {decision: proceed, findings: [CA199_VERY_LOW]}
+
+  - case_id: c05_unit_error
+    note: LYVE1 typed as 5.6 but labelled ug/mL (1000x too high)
+    urine: {lyve1: {value: 5.6, unit: µg/mL}, reg1b: {value: 123, unit: ng/mL}, tff1: {value: 723, unit: ng/mL},
+            creatinine: {value: 0.72, unit: mg/mL}, age: 67, sex: M}
+    clinical: {}
+    expect: {decision: abstain, findings: [UNIT_SUSPECT]}
+
+  - case_id: c06_dilute_urine
+    note: very dilute sample (creatinine 10 mg/dL)
+    urine: {lyve1: {value: 0.4, unit: ng/mL}, reg1b: {value: 9, unit: ng/mL}, tff1: {value: 40, unit: ng/mL},
+            creatinine: {value: 10, unit: mg/dL}, age: 58, sex: M}
+    clinical: {}
+    expect: {decision: proceed, findings: [DILUTE_URINE]}
+
+  - case_id: c07_missing_creatinine
+    note: creatinine not sent -> the case cannot be read
+    urine: {lyve1: {value: 1.0, unit: ng/mL}, reg1b: {value: 30, unit: ng/mL}, tff1: {value: 200, unit: ng/mL},
+            age: 60, sex: F}
+    clinical: {}
+    expect: {decision: abstain, findings: [INTAKE_INVALID]}
+
+  - case_id: c08_jaundice_no_ca199
+    note: high bilirubin in umol/L (150 = 8.8 mg/dL), no CA19-9 measured
+    urine: {lyve1: {value: 0.9, unit: ng/mL}, reg1b: {value: 25, unit: ng/mL}, tff1: {value: 180, unit: ng/mL},
+            creatinine: {value: 7.0, unit: mmol/L}, age: 64, sex: F}
+    clinical: {total_bilirubin: {value: 150, unit: µmol/L}}
+    expect: {decision: proceed, findings: [CHOLESTASIS]}

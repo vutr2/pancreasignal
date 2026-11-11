@@ -10,7 +10,7 @@ confounder critic, human review. Every number comes from a reproducible eval har
 
 ```bash
 python3.12 -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev,notebook,tracking,api,rag]"
+pip install -e ".[dev,notebook,tracking,api,rag,agent]"
 python scripts/download_data.py --only urine   # needs ~/.kaggle/kaggle.json
 python scripts/download_data.py --only mirna_gse59856
 pytest                                         # all tests should pass (no network needed)
@@ -22,6 +22,7 @@ python scripts/download_corpus.py              # 20 open-license articles (Europ
 python scripts/build_rag_index.py              # chunks -> embeddings -> LanceDB
 python scripts/ask_rag.py "Is CA19-9 reliable in obstructive jaundice?"
 python scripts/eval_rag.py                     # 50 questions -> reports/*_rag_eval.json
+python scripts/run_agent.py --all --auto-approve   # Phase 9 agent on 8 synthetic cases
 
 python scripts/make_results.py                 # rebuild RESULTS.md + the tables below
 ```
@@ -31,7 +32,7 @@ python scripts/make_results.py                 # rebuild RESULTS.md + the tables
 ```
 configs/            experiment configs (change values here, not in code); rag.yaml, rag_corpus.yaml
 scripts/            data download, make_results.py (RESULTS.md + tables from reports/), RAG scripts
-evals/              rag_questions.yaml: 40 answerable + 10 out-of-corpus questions
+evals/              rag_questions.yaml (40 answerable + 10 out-of-corpus), agent_cases.yaml (8 synthetic cases)
 notebooks/          01 EDA, 02 urine results, 03 serum miRNA: logic lives in src/
 docs/figures/       plots used in this README
 src/pancreasignal/
@@ -44,7 +45,7 @@ src/pancreasignal/
   explain.py        SHAP, coefficients, miRNA selection stability, batch checks
   api/              FastAPI /predict (Phase 6)
   rag/              guideline RAG (Phase 8): chunking, LanceDB index, cited answers + verifier, evaluation
-  agents/           Phase 9
+  agents/           Phase 9 agent: clinical input, risk clients, critic rules, LangGraph graph, report, tracing
 tests/              unit tests = definition of done
 ```
 
@@ -117,6 +118,37 @@ curl -s -X POST http://127.0.0.1:8000/predict -H "Content-Type: application/json
 - **Safety:** the app refuses to load a model file whose SHA-256 does not match `models/urine_v1.meta.json`.
 - **Docker:** `docker build -t pancreasignal-api . && docker run --rm -p 8000:8000 pancreasignal-api`
   (export the model first; it is copied into the image).
+
+## Agent (Phase 9)
+
+A LangGraph graph that turns one case (urine panel + optional clinical context) into a reviewed,
+bilingual (English / Vietnamese) report.
+
+```
+intake -> risk (urine model) -> critic (rules) -> rag (guideline evidence) -> human_review (pause) -> report
+```
+
+```bash
+python scripts/run_agent.py --case c03_jaundice_high_ca199   # you approve or reject the draft in the terminal
+python scripts/run_agent.py --all --auto-approve             # all 8 synthetic cases in evals/agent_cases.yaml
+python scripts/run_agent.py --all --auto-approve --api-url http://127.0.0.1:8000   # risk from the running API
+```
+
+- **Critic = fixed rules, not an LLM**, so every decision is explainable and tested. It **withholds** the estimate on a
+  probable unit error, an unreadable case or a failed model call, and **warns** on out-of-distribution input, very
+  dilute or concentrated urine, a raised CA19-9 during jaundice (possible false positive) and a near-zero CA19-9
+  (possibly Lewis negative). Thresholds that are common practice rather than from the corpus are marked HEURISTIC in
+  `src/pancreasignal/agents/critic.py`.
+- **Why it matters, from the demo cases:** a LYVE1 value with the wrong unit makes the model output 100%; the critic
+  blocks it. Control-like urine that is very dilute is pushed to 41% by the creatinine division; the critic flags it.
+- **Human in the loop:** the run pauses (`interrupt`) with a draft; it resumes only with an approve/reject decision.
+  Rejected cases are still written, as an audit trail.
+- **Report:** built from templates and the cited evidence, never free text from an LLM. The Vietnamese part is built
+  from the same fields, not machine-translated; guideline evidence stays verbatim in English with its citations.
+- **Tracing:** every node run (duration, LLM calls, cache hits, LLM time, errors) goes to
+  `reports/traces/<run_id>.jsonl`. Plan.md asked for Langfuse via Docker; local JSONL keeps the same data without it.
+- **Tests:** `tests/test_agent.py` checks every critic rule, pause/resume, reject, failures of the model and of the RAG,
+  and that the 8 demo cases get their expected decision.
 
 ## Data
 

@@ -181,10 +181,11 @@ File: `src/pancreasignal/evaluation/splits.py`, `src/pancreasignal/evaluation/me
 
 ## Phase 9: LangGraph orchestration (1 tuần)
 
-- [ ] Graph: `intake → risk_model (gọi API Phase 6) → critic → rag → human_review (interrupt) → report`
-- [ ] Critic kiểm tra: vàng da/bilirubin cao (CA19-9 dương tính giả), creatinine bất thường, thiếu biomarker, giá trị ngoài phân bố → **abstain** (từ chối kết luận)
-- [ ] Langfuse (self-host bằng Docker) để trace từng bước, đo cost và latency
-- [ ] Báo cáo song ngữ VI/EN
+- [x] Graph: `intake → risk → critic → rag → human_review (interrupt) → report` (`src/pancreasignal/agents/graph.py`). Model nguy cơ chạy trực tiếp trong Python (mặc định) **hoặc** gọi API Phase 6 (`--api-url`); cả hai dùng chung `api/service.py`. Intake nhận JSON có cấu trúc, vì Phase 7 đã bỏ qua
+- [x] Critic = **luật cố định** (không dùng LLM): sai đơn vị / thiếu dữ liệu / model lỗi → **abstain**; vàng da + CA19-9 cao, CA19-9 gần 0 (Lewis âm), nước tiểu loãng/đặc, ngoài phân bố → cảnh báo kèm câu hỏi gửi RAG
+- [x] ~~Langfuse (self-host bằng Docker)~~ → **trace JSONL trong project** (`reports/traces/`): thời gian, số lần gọi LLM, cache, lỗi của từng bước. Không cần Docker hay tài khoản
+- [x] Báo cáo song ngữ VI/EN dựng từ mẫu cố định (không để LLM viết); bằng chứng giữ nguyên văn tiếng Anh kèm trích dẫn
+- [x] Demo: `python scripts/run_agent.py --all --auto-approve`, 8 ca giả lập (`evals/agent_cases.yaml`), cả 8 đúng quyết định mong đợi (có test)
 
 ---
 

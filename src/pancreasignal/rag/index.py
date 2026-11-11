@@ -14,6 +14,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import lancedb
+from lancedb.index import FTS
 
 from pancreasignal.config import PROJECT_ROOT
 from pancreasignal.rag.llm import LLMClient
@@ -46,7 +47,8 @@ def build_index(chunks: list[dict], client: LLMClient, cfg: dict) -> Path:
     # Step 3: overwrite the table, then build the BM25 index on the same text that was embedded
     db = lancedb.connect(index_dir)
     table = db.create_table(TABLE, data=rows, mode="overwrite")
-    table.create_fts_index("search_text", replace=True)
+    # (create_fts_index is deprecated since lancedb 0.25; this is the current API)
+    table.create_index("search_text", config=FTS(), replace=True)
 
     # Step 4: remember HOW the index was built. Searching with a different embedding model than the
     #   one used here gives garbage results without any error, so open_index() checks this.

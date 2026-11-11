@@ -23,6 +23,8 @@ api = ["fastapi>=0.115", "uvicorn>=0.30", "pydantic>=2.8"]
 dev = ["pytest>=8.3", "ruff>=0.6", "nbstripout>=0.7", "httpx>=0.27"]   # httpx: FastAPI TestClient
 # Phase 8 guideline RAG: vector DB, OpenAI-compatible client (NVIDIA / Ollama), API key from .env
 rag = ["lancedb>=0.41", "openai>=1.0", "python-dotenv>=1.0"]
+# Phase 9 agent: intake -> risk -> critic -> RAG -> human review -> report (uses the api + rag extras)
+agent = ["langgraph>=1.2"]
 
 [project.scripts]
 pancreasignal-train = "pancreasignal.train:main"
@@ -37,6 +39,9 @@ packages = ["src/pancreasignal"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+# Only this one third-party warning is hidden: langsmith (pulled in by langgraph) calls an asyncio
+# function that Python 3.14 deprecates. Every other warning still shows.
+filterwarnings = ["ignore:'asyncio.iscoroutinefunction' is deprecated:DeprecationWarning:langsmith"]
 
 [tool.ruff]
 line-length = 100
