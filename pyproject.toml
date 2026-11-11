@@ -25,6 +25,8 @@ dev = ["pytest>=8.3", "ruff>=0.6", "nbstripout>=0.7", "httpx>=0.27"]   # httpx: 
 rag = ["lancedb>=0.41", "openai>=1.0", "python-dotenv>=1.0"]
 # Phase 9 agent: intake -> risk -> critic -> RAG -> human review -> report (uses the api + rag extras)
 agent = ["langgraph>=1.2"]
+# Web demo (local + Hugging Face Space): Gradio UI; huggingface_hub gives the `hf` CLI to upload the Space
+demo = ["gradio>=6.0", "huggingface_hub>=1.0"]
 
 [project.scripts]
 pancreasignal-train = "pancreasignal.train:main"

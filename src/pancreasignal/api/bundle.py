@@ -25,6 +25,7 @@ import numpy as np
 import pandas as pd
 import sklearn
 
+from pancreasignal.api.light import UNIT_ERROR_FACTOR, check_ranges, percentile  # noqa: F401 (re-export)
 from pancreasignal.config import PROJECT_ROOT
 from pancreasignal.features import build_features
 from pancreasignal.models import build_model
@@ -32,10 +33,8 @@ from pancreasignal.train import load_task_data
 
 BUNDLE_VERSION = 1
 RAW_INPUTS = ["LYVE1", "REG1B", "TFF1", "creatinine", "age"]   # checked against training ranges
-# A value 10x above anything seen in training is more likely a unit mistake than a real patient.
-# 10, not 100: a typical LYVE1 (~1.2 ng/mL) sent 1000x too high is 1200, which is above 10x the
-# training max (23.9) but BELOW 100x it, so 100 would miss the most common mistake.
-UNIT_ERROR_FACTOR = 10
+# UNIT_ERROR_FACTOR, percentile() and check_ranges() live in api/light.py: shared with the pure-Python
+# copy of this model (browser demo), so both apply exactly the same checks.
 
 
 def _sha256(path: Path) -> str:
@@ -147,11 +146,6 @@ def load_bundle(path: str | Path) -> dict:
     return bundle
 
 
-def _percentile(bundle: dict, feature: str, value: float) -> float:
-    """Where `value` falls in the training distribution of `feature`, 0-100."""
-    return float(np.searchsorted(bundle["quantiles"][feature], value, side="right").clip(1, 101) - 1)
-
-
 def predict_row(bundle: dict, inputs: dict[str, float], age: float, sex: str) -> dict:
     """Predict one patient. `inputs` must already be in dataset units (proteins ng/mL,
     creatinine mg/mL; see api/units.py). Returns probability, every feature's contribution,
@@ -171,29 +165,14 @@ def predict_row(bundle: dict, inputs: dict[str, float], age: float, sex: str) ->
     contributions = [
         {"feature": f, "model_value": float(X.iloc[0][f]), "contribution_log_odds": float(c * zz),
          # a percentile means nothing for a 0/1 feature
-         "training_percentile": None if f == "sex" else _percentile(bundle, f, float(X.iloc[0][f]))}
+         "training_percentile": None if f == "sex" else percentile(bundle["quantiles"][f], float(X.iloc[0][f]))}
         for f, c, zz in zip(X.columns, coef, z, strict=True)
     ]
     contributions.sort(key=lambda d: abs(d["contribution_log_odds"]), reverse=True)
 
-    # Step 3: out-of-distribution = any raw input or model feature outside the training min..max
-    checks = [(name, {**inputs, "age": age}[name], lo, hi) for name, (lo, hi) in bundle["ranges"]["inputs"].items()]
-    checks += [(f"{f} (model feature)", float(X.iloc[0][f]), lo, hi)
-               for f, (lo, hi) in bundle["ranges"]["features"].items() if f != "sex"]
-    out_of_range = [{"feature": n, "value": v, "training_min": lo, "training_max": hi}
-                    for n, v, lo, hi in checks if not lo <= v <= hi]
-
-    # Step 4: a value far outside training (10x) is more often a unit mistake than a real patient.
-    #   Limitation: only "too high" mistakes show up for the proteins. Their training minimum is
-    #   ~0, so a value 1000x too LOW (ng/L sent as ng/mL) still looks normal. Units must be right.
-    warnings_ = []
-    for name, (lo, hi) in bundle["ranges"]["inputs"].items():
-        value = {**inputs, "age": age}[name]
-        if name != "age" and (value > hi * UNIT_ERROR_FACTOR or value < lo / UNIT_ERROR_FACTOR):
-            warnings_.append(f"{name} = {value:g} is more than {UNIT_ERROR_FACTOR}x outside the training range "
-                             f"({lo:g} to {hi:g}): check the unit.")
-    if out_of_range:
-        warnings_.append("Some inputs are outside the training data: this prediction is an extrapolation.")
+    # Step 3: out-of-range inputs/features and likely unit mistakes (shared with api/light.py)
+    out_of_range, warnings_ = check_ranges(bundle["ranges"], inputs, age,
+                                           {f: float(X.iloc[0][f]) for f in X.columns})
 
     return {"probability": probability,
             "base_log_odds": float(model.named_steps["logreg"].intercept_[0]),

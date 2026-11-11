@@ -30,3 +30,6 @@ __pycache__/
 # notebooks / OS
 .ipynb_checkpoints/
 .DS_Store
+
+# Hugging Face Space build (scripts/build_space.py)
+dist/

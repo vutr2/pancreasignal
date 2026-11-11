@@ -11,7 +11,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from pancreasignal.api.bundle import load_bundle
 from pancreasignal.api.schemas import PredictRequest
 from pancreasignal.api.service import build_prediction
 
@@ -19,9 +18,13 @@ from pancreasignal.api.service import build_prediction
 class LocalRisk:
     def __init__(self, bundle_path: str | Path | None = None, bundle: dict | None = None):
         # Step 1: a ready bundle (tests) or the exported model file (load_bundle checks its hash)
+        # (imports here: the browser demo passes a light JSON bundle and has no scikit-learn / FastAPI)
         if bundle is None:
-            from pancreasignal.api.app import DEFAULT_MODEL
-            bundle = load_bundle(bundle_path or DEFAULT_MODEL)
+            from pancreasignal.api.bundle import load_bundle
+            if bundle_path is None:
+                from pancreasignal.api.app import DEFAULT_MODEL
+                bundle_path = DEFAULT_MODEL
+            bundle = load_bundle(bundle_path)
         self.bundle = bundle
         self.name = f"local:{bundle['meta']['name']}"
 

@@ -1,1 +1,1 @@
-"""Phase 6: FastAPI service exposing POST /predict. See Plan.md."""
+"""Phase 6: FastAPI service exposing POST /predict."""

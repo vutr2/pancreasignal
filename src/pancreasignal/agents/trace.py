@@ -1,6 +1,6 @@
 """Per-node tracing for the agent (Phase 9), written to a local JSONL file. Tests: tests/test_agent.py
 
-Plan.md asked for Langfuse (self-hosted with Docker). Docker is not installed and was ruled out as
+The original plan used Langfuse (self-hosted with Docker). Docker is not installed and was ruled out as
 too heavy, so the same information goes to reports/traces/<run_id>.jsonl, one line per node run:
 duration, LLM calls made / served from cache, LLM time, output keys, and errors. Swapping in
 Langfuse later only means sending these same events somewhere else.

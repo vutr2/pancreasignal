@@ -1,0 +1,339 @@
+<!doctype html>
+<!--
+  PancreaSignal free demo (Hugging Face static Space). Copied into dist/static_space/ by
+  scripts/build_static_space.py; edit THIS file, not the copy.
+  No server: Pyodide runs the project's own Python (src/pancreasignal/browser_demo.py) in the browser.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PancreaSignal demo</title>
+<meta name="description" content="Urine-biomarker triage agent for pancreatic cancer with a rule-based critic and human review, running in your browser.">
+<script src="https://cdn.jsdelivr.net/pyodide/v314.0.7/full/pyodide.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/15.0.7/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.2.4/purify.min.js"></script>
+<style>
+  :root {
+    --bg: #f7f8fa; --panel: #ffffff; --text: #1d2330; --muted: #5d6677; --border: #dde1e8;
+    --accent: #2f5bd3; --accent-text: #ffffff; --warn-bg: #fff6e0; --warn-text: #7a5200;
+    --block-bg: #fdecec; --block-text: #9b1c1c; --ok-bg: #e9f6ee; --ok-text: #1d6b3a; --code-bg: #f0f2f6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12151b; --panel: #1a1f27; --text: #e6e9ef; --muted: #9aa3b2; --border: #2c3340;
+      --accent: #7c9bff; --accent-text: #0d1220; --warn-bg: #3a2f12; --warn-text: #f3d48b;
+      --block-bg: #3d1d1d; --block-text: #f5b1b1; --ok-bg: #173323; --ok-text: #9fe0b4; --code-bg: #232a35;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12151b; --panel: #1a1f27; --text: #e6e9ef; --muted: #9aa3b2; --border: #2c3340;
+    --accent: #7c9bff; --accent-text: #0d1220; --warn-bg: #3a2f12; --warn-text: #f3d48b;
+    --block-bg: #3d1d1d; --block-text: #f5b1b1; --ok-bg: #173323; --ok-text: #9fe0b4; --code-bg: #232a35;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 20px 16px 48px; }
+  header h1 { margin: 0 0 4px; font-size: 1.6rem; }
+  header p { margin: 4px 0; color: var(--muted); }
+  a { color: var(--accent); }
+  .disclaimer { display: inline-block; margin-top: 8px; padding: 6px 10px; border-radius: 6px;
+                background: var(--warn-bg); color: var(--warn-text); font-weight: 600; font-size: .9rem; }
+  .tabs { display: flex; gap: 4px; margin: 20px 0 0; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  .tabs button { background: none; border: none; border-bottom: 2px solid transparent; padding: 10px 14px;
+                 color: var(--muted); font: inherit; cursor: pointer; }
+  .tabs button[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
+  .panel { display: none; padding-top: 16px; }
+  .panel.active { display: block; }
+  .grid { display: grid; grid-template-columns: minmax(280px, 2fr) 3fr; gap: 16px; align-items: start; }
+  @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px; min-width: 0; }
+  .card h3 { margin: 0 0 8px; font-size: 1rem; }
+  label { display: block; font-size: .85rem; color: var(--muted); margin: 8px 0 2px; }
+  input, select { width: 100%; padding: 7px 9px; border: 1px solid var(--border); border-radius: 6px;
+                  background: var(--bg); color: var(--text); font: inherit; }
+  .row { display: grid; grid-template-columns: 2fr 1fr; gap: 8px; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .check { display: flex; gap: 16px; margin-top: 10px; }
+  .check label { display: flex; align-items: center; gap: 6px; margin: 0; color: var(--text); }
+  .check input { width: auto; }
+  button.primary, button.secondary, button.danger {
+    border: 1px solid transparent; border-radius: 6px; padding: 9px 14px; font: inherit; font-weight: 600; cursor: pointer; }
+  button.primary { background: var(--accent); color: var(--accent-text); width: 100%; margin-top: 14px; }
+  button.secondary { background: var(--panel); color: var(--text); border-color: var(--border); }
+  button.danger { background: var(--block-bg); color: var(--block-text); }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  .status { padding: 10px 12px; border-radius: 8px; background: var(--code-bg); margin-bottom: 12px; }
+  .status.ok { background: var(--ok-bg); color: var(--ok-text); }
+  .status.warn { background: var(--warn-bg); color: var(--warn-text); }
+  .status.block { background: var(--block-bg); color: var(--block-text); }
+  .review { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0 4px; }
+  .report { overflow-wrap: anywhere; }
+  .report h1 { font-size: 1.25rem; } .report h2 { font-size: 1.1rem; border-top: 1px solid var(--border); padding-top: 12px; }
+  .report h3 { font-size: 1rem; }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+  th, td { border-bottom: 1px solid var(--border); padding: 5px 8px; text-align: left; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .table-scroll { overflow-x: auto; }
+  code { background: var(--code-bg); padding: 1px 4px; border-radius: 4px; }
+  .prose img { max-width: 100%; height: auto; }
+  .prose table { display: block; overflow-x: auto; }
+  .muted { color: var(--muted); font-size: .88rem; }
+  .loading { display: flex; align-items: center; gap: 10px; }
+  .spinner { width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--accent);
+             border-radius: 50%; animation: spin 1s linear infinite; flex: none; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>PancreaSignal</h1>
+    <p>Urine-biomarker triage for pancreatic cancer (PDAC), inside an agent with a rule-based critic, cited
+      guideline evidence and a human reviewer. <a id="repo-link" href="https://github.com/vutr2/pancreasignal" target="_blank" rel="noopener">Code, evaluation and limitations on GitHub</a>.</p>
+    <span class="disclaimer">Research prototype. Not a medical device. Synthetic cases only: do not enter real patient data.</span>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button role="tab" aria-selected="true" data-tab="agent">Agent</button>
+    <button role="tab" aria-selected="false" data-tab="how">How it works</button>
+    <button role="tab" aria-selected="false" data-tab="results">Results and limits</button>
+  </nav>
+
+  <section id="tab-agent" class="panel active" role="tabpanel">
+    <div class="grid">
+      <div class="card">
+        <label for="example">Load a synthetic case (or edit the values below)</label>
+        <select id="example" disabled><option>Loading…</option></select>
+        <label for="f-case_id">Case ID</label>
+        <input id="f-case_id" type="text">
+        <h3 style="margin-top:14px">Urine panel <span class="muted">(every value needs its unit)</span></h3>
+        <div class="row"><div><label for="f-lyve1">LYVE1</label><input id="f-lyve1" type="number" step="any" min="0"></div>
+          <div><label for="f-lyve1_unit">unit</label><input id="f-lyve1_unit" list="units-protein"></div></div>
+        <div class="row"><div><label for="f-reg1b">REG1B</label><input id="f-reg1b" type="number" step="any" min="0"></div>
+          <div><label for="f-reg1b_unit">unit</label><input id="f-reg1b_unit" list="units-protein"></div></div>
+        <div class="row"><div><label for="f-tff1">TFF1</label><input id="f-tff1" type="number" step="any" min="0"></div>
+          <div><label for="f-tff1_unit">unit</label><input id="f-tff1_unit" list="units-protein"></div></div>
+        <div class="row"><div><label for="f-creatinine">Creatinine</label><input id="f-creatinine" type="number" step="any" min="0"></div>
+          <div><label for="f-creatinine_unit">unit</label><input id="f-creatinine_unit" list="units-creatinine"></div></div>
+        <div class="row2"><div><label for="f-age">Age</label><input id="f-age" type="number" step="any" min="0" max="119"></div>
+          <div><label for="f-sex">Sex</label><select id="f-sex"><option value="">(not given)</option><option>M</option><option>F</option></select></div></div>
+        <h3 style="margin-top:14px">Clinical context <span class="muted">(optional; the model does not use it, the critic does)</span></h3>
+        <div class="row"><div><label for="f-ca19_9">Plasma CA19-9</label><input id="f-ca19_9" type="number" step="any" min="0"></div>
+          <div><label for="f-ca19_9_unit">unit</label><input id="f-ca19_9_unit" list="units-ca19_9"></div></div>
+        <div class="row"><div><label for="f-bilirubin">Total bilirubin</label><input id="f-bilirubin" type="number" step="any" min="0"></div>
+          <div><label for="f-bilirubin_unit">unit</label><input id="f-bilirubin_unit" list="units-bilirubin"></div></div>
+        <div class="check"><label><input id="f-jaundice" type="checkbox"> Jaundice</label>
+          <label><input id="f-nod" type="checkbox"> New-onset diabetes</label></div>
+        <button id="run" class="primary" disabled>1. Run agent</button>
+        <datalist id="units-protein"></datalist><datalist id="units-creatinine"></datalist>
+        <datalist id="units-ca19_9"></datalist><datalist id="units-bilirubin"></datalist>
+      </div>
+
+      <div class="card">
+        <div id="status" class="status loading"><span class="spinner"></span><span id="status-text">Loading Python in your browser (Pyodide, about 10 MB, first visit only)…</span></div>
+        <div class="review">
+          <div><label for="reviewer">Reviewer</label><input id="reviewer" value="demo-reviewer"></div>
+          <div><label for="note">Note for the report (optional)</label><input id="note"></div>
+        </div>
+        <div class="actions">
+          <button id="approve" class="secondary" disabled>2. Approve</button>
+          <button id="reject" class="danger" disabled>2. Reject</button>
+          <button id="download" class="secondary" disabled>Download report (.md)</button>
+        </div>
+        <div id="report" class="report prose"></div>
+        <div id="trace" class="table-scroll"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="tab-how" class="panel prose" role="tabpanel">
+    <div class="card">
+      <h3>Pipeline</h3>
+      <p><code>intake → risk → critic → rag → human_review (pause) → report</code></p>
+      <ul>
+        <li><b>intake</b> validates the case. Every lab value needs a unit; unknown units are rejected, never guessed.</li>
+        <li><b>risk</b> is a logistic regression on urine LYVE1, REG1B and TFF1 (each divided by urine creatinine), age
+          and sex, trained on <span id="n-train">590</span> patients from 4 hospitals (Debernardi et al., <i>PLOS Medicine</i>
+          2020, CC BY 4.0). Its output is a probability in case-control data, not a screening risk.</li>
+        <li><b>critic</b> is a set of fixed rules, not an LLM, so every decision is explainable and tested. It withholds the
+          estimate on a probable unit error or an unreadable case, and warns on out-of-range input, very dilute or
+          concentrated urine, a raised CA19-9 during jaundice and a near-zero CA19-9.</li>
+        <li><b>rag</b> turns each warning into a question for the guideline RAG (20 open-license articles, hybrid search,
+          every sentence cited and checked by a second model call). The critic's questions are fixed, so their answers
+          were computed once with that RAG and are shown from a snapshot.</li>
+        <li><b>human_review</b> pauses until a person approves or rejects. Rejected reports are still written (audit trail).</li>
+        <li><b>report</b> is English + Vietnamese, built from templates and the cited evidence, never free text from an LLM.</li>
+      </ul>
+      <h3>What runs on this page</h3>
+      <p>This free version has no server. <a href="https://pyodide.org" target="_blank" rel="noopener">Pyodide</a> runs the
+        project's own Python in your browser: the same step functions, critic rules, unit checks and report templates as the
+        server agent. The urine model runs as a pure-Python copy of the scikit-learn model (its coefficients in JSON), tested
+        to give the same output. Nothing you type leaves this page.</p>
+      <p>The full version (in the repository) runs these steps as a LangGraph graph with a checkpointer and
+        <code>interrupt()</code> for the human review, traces every node, and can answer free questions with the live RAG,
+        which needs an API key and therefore a server.</p>
+    </div>
+  </section>
+
+  <section id="tab-results" class="panel" role="tabpanel">
+    <div id="results" class="card prose">Loading…</div>
+  </section>
+</div>
+
+<script>
+"use strict";
+const PYODIDE_URL = "https://cdn.jsdelivr.net/pyodide/v314.0.7/full/";
+// form fields in the order of webform.case_from_form's arguments
+const FIELDS = ["case_id", "lyve1", "lyve1_unit", "reg1b", "reg1b_unit", "tff1", "tff1_unit", "creatinine",
+  "creatinine_unit", "age", "sex", "ca19_9", "ca19_9_unit", "bilirubin", "bilirubin_unit", "jaundice", "nod"];
+const NUMBERS = new Set(["lyve1", "reg1b", "tff1", "creatinine", "age", "ca19_9", "bilirubin"]);
+const CHECKS = new Set(["jaundice", "nod"]);
+const $ = (id) => document.getElementById(id);
+let demo = null;          // the Python module pancreasignal.browser_demo
+let cases = [];
+let lastReport = null;    // {case_id, markdown} of the final report, for the download button
+
+// ---------------------------------------------------------------- page helpers
+function md(text) { return DOMPurify.sanitize(marked.parse(text)); }
+
+function setStatus(html, kind = "") {
+  const box = $("status");
+  box.className = "status " + kind;
+  box.innerHTML = html;
+}
+
+function pythonError(err) {
+  // a Python traceback is long; its last line says what went wrong
+  const lines = String(err && err.message || err).trim().split("\n").filter(Boolean);
+  return lines[lines.length - 1] || "Unknown error";
+}
+
+function readForm() {
+  return FIELDS.map((name) => {
+    const el = $("f-" + name);
+    if (CHECKS.has(name)) return el.checked;
+    if (NUMBERS.has(name)) return el.value === "" ? null : Number(el.value);
+    return el.value === "" && name === "sex" ? null : el.value;
+  });
+}
+
+function fillForm(values) {
+  FIELDS.forEach((name, i) => {
+    const el = $("f-" + name), v = values[i];
+    if (CHECKS.has(name)) el.checked = Boolean(v);
+    else el.value = v === null || v === undefined ? "" : String(v);
+  });
+}
+
+function renderTrace(timings) {
+  const rows = timings.map((t) =>
+    `<tr><td>${t.node}</td><td>${t.status}</td><td class="num">${(t.duration_s * 1000).toFixed(1)}</td></tr>`).join("");
+  $("trace").innerHTML = `<h3>Trace</h3><table><thead><tr><th>node</th><th>status</th><th class="num">ms</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+function setReviewButtons(enabled) {
+  $("approve").disabled = !enabled;
+  $("reject").disabled = !enabled;
+}
+
+// ---------------------------------------------------------------- actions
+function runAgent() {
+  try {
+    const out = JSON.parse(demo.draft(JSON.stringify(readForm())));
+    const kind = out.decision === "abstain" ? "block" : (out.findings.length ? "warn" : "ok");
+    setStatus(`<b>Paused for human review.</b> Read the draft below, then approve or reject it.<br>${md(out.headline)}`, kind);
+    $("report").innerHTML = md(out.markdown);
+    renderTrace(out.timings);
+    setReviewButtons(true);
+    $("download").disabled = true;
+    lastReport = null;
+  } catch (err) {
+    setStatus("Error: " + pythonError(err), "block");
+  }
+}
+
+function review(decision) {
+  try {
+    const out = JSON.parse(demo.finish(decision, $("reviewer").value, $("note").value));
+    setStatus(`<b>Final report: ${out.status}</b><br>${md(out.headline)}`, decision === "approve" ? "ok" : "block");
+    $("report").innerHTML = md(out.markdown);
+    setReviewButtons(false);
+    lastReport = {case_id: out.case_id, markdown: out.markdown};
+    $("download").disabled = false;
+  } catch (err) {
+    setStatus("Error: " + pythonError(err), "block");
+  }
+}
+
+function download() {
+  if (!lastReport) return;
+  const url = URL.createObjectURL(new Blob([lastReport.markdown], {type: "text/markdown"}));
+  const a = Object.assign(document.createElement("a"), {href: url, download: `${lastReport.case_id}_report.md`});
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ---------------------------------------------------------------- start-up
+async function boot() {
+  try {
+    const statusText = (t) => { $("status-text").textContent = t; };
+    // Step 1: Python + pydantic, from the Pyodide CDN (cached by the browser after the first visit)
+    const pyodide = await loadPyodide({indexURL: PYODIDE_URL});
+    statusText("Loading pydantic…");
+    await pyodide.loadPackage(["pydantic"]);
+
+    // Step 2: the project's Python modules + the model, evidence and demo cases (files of this Space)
+    statusText("Loading the model and the agent…");
+    const get = async (path, kind) => {
+      const r = await fetch(path);
+      if (!r.ok) throw new Error(`${path}: HTTP ${r.status}`);
+      return kind === "bytes" ? r.arrayBuffer() : r.text();
+    };
+    const [zip, light, snapshot, casesJson] = await Promise.all([
+      get("pancreasignal.zip", "bytes"), get("model_light.json"), get("evidence_snapshot.json"), get("cases.json")]);
+    pyodide.unpackArchive(zip, "zip", {extractDir: "/home/pyodide/app"});
+    pyodide.runPython("import sys; sys.path.insert(0, '/home/pyodide/app')");
+    demo = pyodide.pyimport("pancreasignal.browser_demo");
+    const info = JSON.parse(demo.setup(light, snapshot, casesJson));
+
+    // Step 3: build the form from what Python returned (same units and cases as the server demo)
+    for (const [key, units] of Object.entries(info.units)) {
+      $("units-" + key).innerHTML = units.map((u) => `<option value="${u}">`).join("");
+    }
+    cases = info.cases;
+    $("example").innerHTML = cases.map((c) => `<option value="${c.case_id}">${c.case_id}: ${c.note}</option>`).join("");
+    const first = cases.find((c) => c.case_id === "c03_jaundice_high_ca199") || cases[0];
+    $("example").value = first.case_id;
+    fillForm(first.form);
+    $("n-train").textContent = info.model.n_train;
+    $("example").disabled = false;
+    $("run").disabled = false;
+    setStatus("Ready. Load a case (or type values), then press <b>Run agent</b>. Everything runs in your browser.");
+  } catch (err) {
+    setStatus("Could not start the demo: " + pythonError(err), "block");
+  }
+}
+
+// ---------------------------------------------------------------- wiring
+document.querySelectorAll(".tabs button").forEach((btn) => btn.addEventListener("click", () => {
+  document.querySelectorAll(".tabs button").forEach((b) => b.setAttribute("aria-selected", String(b === btn)));
+  document.querySelectorAll(".panel").forEach((p) => p.classList.toggle("active", p.id === "tab-" + btn.dataset.tab));
+}));
+$("example").addEventListener("change", (e) => {
+  const c = cases.find((x) => x.case_id === e.target.value);
+  if (c) fillForm(c.form);
+});
+$("run").addEventListener("click", runAgent);
+$("approve").addEventListener("click", () => review("approve"));
+$("reject").addEventListener("click", () => review("reject"));
+$("download").addEventListener("click", download);
+fetch("results.md").then((r) => r.ok ? r.text() : Promise.reject(r.status))
+  .then((t) => { $("results").innerHTML = md(t); })
+  .catch(() => { $("results").textContent = "Results summary not found."; });
+boot();
+</script>
+</body>
+</html>

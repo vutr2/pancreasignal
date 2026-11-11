@@ -1,6 +1,8 @@
-import os, time
+import os
+
 from dotenv import load_dotenv
 from openai import OpenAI
+
 load_dotenv(".env")
 client = OpenAI(base_url="https://integrate.api.nvidia.com/v1", api_key=os.environ["NVIDIA_API_KEY"])
 MODEL = "nvidia/nemotron-3.5-lightning-30b-a3b"

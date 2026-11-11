@@ -8,10 +8,10 @@ Usage (from project root):
 from __future__ import annotations
 
 import json
-import time 
+import time
+
 import requests
 import yaml
-
 from download_data import MANIFEST, PROJECT_ROOT, sha256
 
 CONFIG = PROJECT_ROOT / "configs" / "rag_corpus.yaml"

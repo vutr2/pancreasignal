@@ -21,13 +21,17 @@ from typing import TypedDict
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Command, interrupt
-from pydantic import ValidationError
 
-from pancreasignal.agents.clinical import CaseInput
-from pancreasignal.agents.critic import review_case
 from pancreasignal.agents.report import build_report, save_report
+from pancreasignal.agents.steps import (
+    critic_step,
+    intake_step,
+    rag_step,
+    review_draft,
+    review_step,
+    risk_step,
+)
 from pancreasignal.agents.trace import Tracer
-from pancreasignal.api.schemas import PredictRequest
 
 
 class AgentState(TypedDict, total=False):
@@ -52,72 +56,33 @@ class AgentDeps:
     report_dir: str
 
 
-def _errors(e: ValidationError) -> list[str]:
-    """'urine.creatinine: Field required' style messages."""
-    return [f"{'.'.join(str(x) for x in err['loc'])}: {err['msg']}" for err in e.errors()]
-
-
 def build_graph(deps: AgentDeps):
     t = deps.tracer
 
+    # Each node only calls a plain function from agents/steps.py (the browser demo runs the same ones).
     @t.node("intake")
     def intake(state: AgentState) -> dict:
         # Step 1: validate; a bad case is recorded (the critic will block it), never crashes the run
-        try:
-            case = CaseInput.model_validate(state["raw"])
-        except ValidationError as e:
-            return {"case": None, "clinical": {}, "intake_errors": _errors(e),
-                    "case_id": str(state["raw"].get("case_id", "invalid"))}
-        return {"case": case.model_dump(), "clinical": case.clinical.normalised(), "intake_errors": [],
-                "case_id": case.case_id}
+        return intake_step(state["raw"])
 
     @t.node("risk")
     def risk(state: AgentState) -> dict:
         # Step 2: no valid case -> no risk call; a failing model/API -> recorded for the critic
-        if state["case"] is None:
-            return {"risk": None, "risk_error": None}
-        try:
-            return {"risk": deps.risk_client.predict(PredictRequest.model_validate(state["case"]["urine"])),
-                    "risk_error": None}
-        except Exception as e:  # noqa: BLE001 - any failure (HTTP, file, model) must become a 'block'
-            return {"risk": None, "risk_error": f"{type(e).__name__}: {e}"}
+        return risk_step(state["case"], deps.risk_client)
 
     @t.node("critic")
     def critic(state: AgentState) -> dict:
-        return {"critic": review_case(state["intake_errors"], state.get("risk"), state.get("clinical"),
-                                      risk_error=state.get("risk_error"))}
+        return critic_step(state)
 
     @t.node("rag")
     def rag(state: AgentState) -> dict:
         # Step 3: one guideline question per finding that has one (deduplicated, in order)
-        questions = list(dict.fromkeys(f["rag_question"] for f in state["critic"]["findings"] if f["rag_question"]))
-        evidence = []
-        for q in questions:
-            if deps.rag_fn is None:
-                evidence.append({"question": q, "error": "RAG not configured"})
-                continue
-            try:
-                res = deps.rag_fn(q)
-            except Exception as e:  # noqa: BLE001 - missing key / index / network: report it, keep going
-                evidence.append({"question": q, "error": f"{type(e).__name__}: {e}"})
-                continue
-            evidence.append({"question": q, "answer": res["answer"], "refused": res["refused"],
-                             "citations": res["citations"]})
-        return {"evidence": evidence}
+        return rag_step(state["critic"]["findings"], deps.rag_fn)
 
     @t.node("human_review")
     def human_review(state: AgentState) -> dict:
         # Step 4: PAUSE. The draft goes to a person; the run resumes with their decision.
-        draft = {"case_id": state["case_id"], "decision": state["critic"]["decision"],
-                 "probability": (state["risk"] or {}).get("probability") if state["critic"]["decision"] == "proceed" else None,
-                 "findings": [f"[{f['severity']}] {f['message_en']}" for f in state["critic"]["findings"]],
-                 "evidence": [{"question": e["question"], "answer": e.get("answer"), "error": e.get("error")}
-                              for e in state["evidence"]]}
-        reply = interrupt(draft)
-        if not isinstance(reply, dict) or reply.get("decision") not in ("approve", "reject"):
-            raise ValueError(f"Review reply must be {{'decision': 'approve'|'reject', ...}}, got {reply!r}")
-        return {"review": {"decision": reply["decision"], "reviewer": reply.get("reviewer", "unknown"),
-                           "note": reply.get("note", "")}}
+        return review_step(interrupt(review_draft(state)))
 
     @t.node("report")
     def report(state: AgentState) -> dict:

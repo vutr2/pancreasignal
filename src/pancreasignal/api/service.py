@@ -5,7 +5,7 @@ same code: one place for unit conversion, reasons and warnings, so the two can n
 """
 from __future__ import annotations
 
-from pancreasignal.api.bundle import predict_row
+from pancreasignal.api.light import LIGHT_FORMAT, predict_row_light
 from pancreasignal.api.schemas import PredictRequest, PredictResponse
 
 # Always returned: what the number is and is not (Phase 4 findings)
@@ -27,13 +27,22 @@ def _reason_text(feature: str, direction: str, percentile: float | None, request
             f"it {direction} the risk.")
 
 
+def _predictor(bundle: dict):
+    """predict_row for a full bundle (scikit-learn), predict_row_light for its JSON copy (browser demo).
+    The sklearn import is done here, not at the top, so the browser never needs scikit-learn."""
+    if bundle.get("format") == LIGHT_FORMAT:
+        return predict_row_light
+    from pancreasignal.api.bundle import predict_row
+    return predict_row
+
+
 def build_prediction(bundle: dict, request: PredictRequest) -> PredictResponse:
     """Probability, top-3 reasons, out-of-distribution flag and warnings for one validated request."""
     # Step 1: convert every value to the units the model was trained on (already validated)
     inputs = request.in_dataset_units()
 
     # Step 2: predict + exact per-feature contributions + out-of-range check
-    result = predict_row(bundle, inputs, request.age, request.sex)
+    result = _predictor(bundle)(bundle, inputs, request.age, request.sex)
 
     # Step 3: top 3 reasons as readable text
     reasons = []

@@ -22,6 +22,9 @@ CREATININE_CONCENTRATED_MG_ML = 3.0  # HEURISTIC: 300 mg/dL, very concentrated u
 Q_JAUNDICE = "Is CA19-9 reliable in a patient with obstructive jaundice?"
 Q_LEWIS = "Why do some pancreatic cancer patients have undetectable CA19-9?"
 Q_DIABETES = "Should people with new-onset diabetes be investigated for pancreatic cancer?"
+# Every question the critic can ask. Fixed questions -> their cited answers can be computed once and
+# shipped with the demo (scripts/build_space.py); a new rule with a new question must be added here.
+RAG_QUESTIONS = (Q_JAUNDICE, Q_LEWIS, Q_DIABETES)
 
 
 def _finding(code: str, severity: str, en: str, vi: str, question: str | None = None) -> dict:

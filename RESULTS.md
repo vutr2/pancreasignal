@@ -195,7 +195,7 @@ Each row is one full evaluation; every failure was read before the next change w
 - **Small folds**: ESP has 29 patients; sensitivity numbers have no CI yet.
 - **CA19-9 subset** is not random (missing not at random), so the head-to-head covers part of the data only.
 
-## Sanity checks (Plan.md)
+## Sanity checks
 
 - Highest AUROC anywhere: 0.929 (> 0.97 would suggest leakage).
 - PDAC vs control (0.929) > PDAC vs benign (0.788), as expected (different splits, rough check only).

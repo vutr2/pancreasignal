@@ -16,7 +16,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import requests
@@ -53,7 +53,7 @@ def update_manifest(name: str, out_dir: Path, source: str) -> None:
     manifest = json.loads(MANIFEST.read_text()) if MANIFEST.exists() else {}
     manifest[name] = {
         "source": source,
-        "downloaded_at": datetime.now(timezone.utc).isoformat(),
+        "downloaded_at": datetime.now(UTC).isoformat(),
         "files": {p.name: sha256(p) for p in sorted(out_dir.iterdir()) if p.is_file()},
     }
     MANIFEST.write_text(json.dumps(manifest, indent=2))
@@ -111,7 +111,7 @@ def main() -> None:
                 source = download_geo(cfg["gse"], out_dir, cfg.get("platform"))
             update_manifest(name, out_dir, source)
             print(f"[ok  ] {name} -> {out_dir.relative_to(PROJECT_ROOT)}")
-        except Exception as e:  # keep going with other datasets
+        except Exception as e:  # noqa: BLE001 - one failed download must not stop the others
             print(f"[fail] {name}: {e}")
 
     print(

@@ -1,1 +1,1 @@
-"""Phase 7-9: LangGraph agents (intake, risk, guideline RAG, critic). See Plan.md."""
+"""Phase 9: LangGraph agent (clinical input, risk, critic rules, guideline RAG, human review, report)."""

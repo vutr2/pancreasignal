@@ -8,6 +8,7 @@ at this step, and the Vietnamese version is built from the same fields, not mach
 from __future__ import annotations
 
 import json
+from collections import Counter
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -89,6 +90,18 @@ def build_report(state: dict) -> dict:
                "findings": [f["code"] for f in critic["findings"]],
                "evidence_questions": [e["question"] for e in state.get("evidence", [])]}
     return {"markdown": "\n".join(md), "summary": summary}
+
+
+def headline(state: dict) -> str:
+    """One line for the top of a web page: the estimate (or that it is withheld) + what the critic found."""
+    critic, risk = state["critic"], state.get("risk")
+    counts = Counter(f["severity"] for f in critic["findings"])
+    found = ", ".join(f"{counts[s]} {SEVERITY[s][0].lower()}" for s in ("block", "warn", "info") if counts[s])
+    codes = ", ".join(f["code"] for f in critic["findings"])
+    detail = f"{found}: {codes}" if codes else "no findings"
+    if critic["decision"] == "abstain" or risk is None:
+        return f"**Risk estimate withheld** (critic: abstain; {detail})"
+    return f"**Model output: {risk['probability']:.0%}** (critic: proceed; {detail})"
 
 
 def save_report(report: dict, out_dir: str | Path, run_id: str) -> dict:

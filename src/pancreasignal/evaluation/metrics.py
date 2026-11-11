@@ -5,8 +5,7 @@ y: 1 = PDAC, 0 = not PDAC.  score: higher = more likely PDAC (probability or raw
 from __future__ import annotations
 
 import numpy as np
-from sklearn.metrics import brier_score_loss, roc_auc_score
-from sklearn.metrics import roc_curve
+from sklearn.metrics import brier_score_loss, roc_auc_score, roc_curve
 
 
 def sensitivity_at_specificity(y: np.ndarray, score: np.ndarray, specificity: float) -> float:
@@ -257,7 +256,7 @@ def compute_metrics(
     y, score = np.asarray(y), np.asarray(score)
     lo, hi = bootstrap_auroc_ci(y, score, ev["n_bootstrap"], random_state=ev["random_state"])
     out = {
-        "n": int(len(y)),
+        "n": len(y),
         "n_pdac": int(y.sum()),
         "auroc": float(roc_auc_score(y, score)),
         "auroc_ci95": [float(lo), float(hi)],

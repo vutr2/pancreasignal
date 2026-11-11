@@ -25,7 +25,7 @@ def test_xgboost(fake_urine, cfg):
 
 def test_end_to_end(fake_urine, cfg, tmp_path, monkeypatch):
     """Runs the full train.run() on the fake table. Passes when Phases 1-3 are done."""
-    import pancreasignal.train as train
+    from pancreasignal import train
 
     monkeypatch.setattr(train, "load_urine", lambda path: fake_urine)
     out = train.run(cfg)

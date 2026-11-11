@@ -9,8 +9,8 @@ confounder critic, human review. Every number comes from a reproducible eval har
 ## Quickstart (Mac, venv + pip)
 
 ```bash
-python3.12 -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev,notebook,tracking,api,rag,agent]"
+python3.14 -m venv .venv && source .venv/bin/activate   # 3.14: the version in requirements-lock.txt
+pip install -e ".[dev,notebook,tracking,api,rag,agent,demo]"
 python scripts/download_data.py --only urine   # needs ~/.kaggle/kaggle.json
 python scripts/download_data.py --only mirna_gse59856
 pytest                                         # all tests should pass (no network needed)
@@ -23,6 +23,8 @@ python scripts/build_rag_index.py              # chunks -> embeddings -> LanceDB
 python scripts/ask_rag.py "Is CA19-9 reliable in obstructive jaundice?"
 python scripts/eval_rag.py                     # 50 questions -> reports/*_rag_eval.json
 python scripts/run_agent.py --all --auto-approve   # Phase 9 agent on 8 synthetic cases
+python -m pancreasignal.demo                   # web demo at http://127.0.0.1:7860
+python scripts/build_static_space.py           # free Hugging Face Space (runs in the browser)
 
 python scripts/make_results.py                 # rebuild RESULTS.md + the tables below
 ```
@@ -33,6 +35,8 @@ python scripts/make_results.py                 # rebuild RESULTS.md + the tables
 configs/            experiment configs (change values here, not in code); rag.yaml, rag_corpus.yaml
 scripts/            data download, make_results.py (RESULTS.md + tables from reports/), RAG scripts
 evals/              rag_questions.yaml (40 answerable + 10 out-of-corpus), agent_cases.yaml (8 synthetic cases)
+deploy/static/      free Hugging Face Space: one HTML page + Pyodide (scripts/build_static_space.py)
+deploy/space/       Docker Space for HF PRO (scripts/build_space.py)
 notebooks/          01 EDA, 02 urine results, 03 serum miRNA: logic lives in src/
 docs/figures/       plots used in this README
 src/pancreasignal/
@@ -46,6 +50,7 @@ src/pancreasignal/
   api/              FastAPI /predict (Phase 6)
   rag/              guideline RAG (Phase 8): chunking, LanceDB index, cited answers + verifier, evaluation
   agents/           Phase 9 agent: clinical input, risk clients, critic rules, LangGraph graph, report, tracing
+  demo.py           Gradio web demo (local, Docker Space); browser_demo.py: the same in Pyodide
 tests/              unit tests = definition of done
 ```
 
@@ -146,9 +151,41 @@ python scripts/run_agent.py --all --auto-approve --api-url http://127.0.0.1:8000
 - **Report:** built from templates and the cited evidence, never free text from an LLM. The Vietnamese part is built
   from the same fields, not machine-translated; guideline evidence stays verbatim in English with its citations.
 - **Tracing:** every node run (duration, LLM calls, cache hits, LLM time, errors) goes to
-  `reports/traces/<run_id>.jsonl`. Plan.md asked for Langfuse via Docker; local JSONL keeps the same data without it.
+  `reports/traces/<run_id>.jsonl`. Langfuse would need Docker; local JSONL keeps the same data without it.
 - **Tests:** `tests/test_agent.py` checks every critic rule, pause/resume, reject, failures of the model and of the RAG,
   and that the 8 demo cases get their expected decision.
+
+## Web demo (Hugging Face Space)
+
+Two versions of the same demo (the run pauses for an approve/reject decision, then shows the bilingual
+report and the per-step trace):
+
+| | Free static Space | Server version (local, or Docker Space on HF PRO) |
+|---|---|---|
+| Runs | in the visitor's browser ([Pyodide](https://pyodide.org)) | Gradio app (`python -m pancreasignal.demo`) |
+| Agent | the same step functions (`agents/steps.py`), run in a row | LangGraph graph: checkpointer, `interrupt()` |
+| Urine model | `api/light.py`: its coefficients in JSON, tested equal to scikit-learn | the exported `.joblib` |
+| Guideline evidence | snapshot of the RAG's answers to the critic's fixed questions | snapshot, or the live RAG |
+| Free questions to the RAG | no (would need an API key, hence a server) | yes, with `NVIDIA_API_KEY` as a Space secret, rationed |
+
+```bash
+# free static Space (Gradio/Docker Spaces need HF PRO)
+python scripts/build_static_space.py           # -> dist/static_space/ (9 files, no secrets, no pickle)
+python -m http.server 8000 --directory dist/static_space   # try it locally
+hf upload <hf-username>/pancreasignal dist/static_space . --repo-type space
+
+# server version
+python -m pancreasignal.demo                   # local: http://127.0.0.1:7860
+python scripts/build_space.py                  # -> dist/space/ (Docker Space, needs HF PRO)
+python scripts/build_space.py --set-secret <hf-username>/<space>   # .env key -> Space secret (never a file)
+```
+
+- **Guideline evidence without an API key:** the critic only asks fixed questions (`critic.RAG_QUESTIONS`), so
+  their cited answers are computed once by the RAG (`reports/demo/evidence_snapshot.json`).
+- **No key in any uploaded file:** both build scripts copy an allow-list of files and refuse to finish if a file
+  looks like an NVIDIA or Hugging Face key.
+- **Tests:** `tests/test_light_model.py` (light model = scikit-learn on the demo cases and 300 random patients;
+  the browser code needs only pydantic), `tests/test_browser_demo.py`, `tests/test_demo.py`.
 
 ## Data
 

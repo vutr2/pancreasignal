@@ -392,7 +392,7 @@ def main() -> None:
         "- **Small folds**: ESP has 29 patients; sensitivity numbers have no CI yet.",
         "- **CA19-9 subset** is not random (missing not at random), so the head-to-head covers part of the data only.",
         "",
-        "## Sanity checks (Plan.md)",
+        "## Sanity checks",
         "",
         (f"- Highest AUROC anywhere: {max(res(t, v)['model_all']['auroc'] for t in TASKS for v in variants):.3f} "
         "(> 0.97 would suggest leakage)."),

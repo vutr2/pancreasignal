@@ -2,7 +2,12 @@
 import numpy as np
 import pytest
 
-from pancreasignal.features import build_features, encode_sex, log_transform, normalize_by_creatinine
+from pancreasignal.features import (
+    build_features,
+    encode_sex,
+    log_transform,
+    normalize_by_creatinine,
+)
 
 BIOS = ["LYVE1", "REG1B", "TFF1"]
 
