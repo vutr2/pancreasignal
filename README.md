@@ -6,6 +6,9 @@ confounder critic, human review. Every number comes from a reproducible eval har
 
 > Research prototype. Not a medical device. Not for clinical use.
 
+**Live demo:** [Hugging Face Space](https://huggingface.co/spaces/trungvu0307/pancreasignal) (runs in your browser) ·
+**Model:** [trungvu0307/pancreasignal-urine-logreg](https://huggingface.co/trungvu0307/pancreasignal-urine-logreg)
+
 ## Quickstart (Mac, venv + pip)
 
 ```bash
@@ -25,6 +28,7 @@ python scripts/eval_rag.py                     # 50 questions -> reports/*_rag_e
 python scripts/run_agent.py --all --auto-approve   # Phase 9 agent on 8 synthetic cases
 python -m pancreasignal.demo                   # web demo at http://127.0.0.1:7860
 python scripts/build_static_space.py           # free Hugging Face Space (runs in the browser)
+python scripts/build_hf_model.py               # Hugging Face model repo: model card + model files
 
 python scripts/make_results.py                 # rebuild RESULTS.md + the tables below
 ```
@@ -37,6 +41,7 @@ scripts/            data download, make_results.py (RESULTS.md + tables from rep
 evals/              rag_questions.yaml (40 answerable + 10 out-of-corpus), agent_cases.yaml (8 synthetic cases)
 deploy/static/      free Hugging Face Space: one HTML page + Pyodide (scripts/build_static_space.py)
 deploy/space/       Docker Space for HF PRO (scripts/build_space.py)
+deploy/model/       Hugging Face model card template (scripts/build_hf_model.py)
 notebooks/          01 EDA, 02 urine results, 03 serum miRNA: logic lives in src/
 docs/figures/       plots used in this README
 src/pancreasignal/
@@ -187,6 +192,18 @@ python scripts/build_space.py --set-secret <hf-username>/<space>   # .env key ->
 - **Tests:** `tests/test_light_model.py` (pure-Python copy and rebuilt Pipeline = the pickled model on the demo
   cases and 300 random patients; the browser code needs only what Pyodide ships), `tests/test_browser_demo.py`
   (both engines, all 8 cases), `tests/test_demo.py`.
+
+### The model on Hugging Face
+
+[trungvu0307/pancreasignal-urine-logreg](https://huggingface.co/trungvu0307/pancreasignal-urine-logreg) holds the
+served urine model: `model_light.json` (the fitted numbers, loads in any scikit-learn), the original `.joblib` and a
+model card. `scripts/build_hf_model.py` fills the card's numbers from the model's own metadata, and
+`tests/test_hf_model.py` runs the card's code example and checks it predicts what the API serves.
+
+```bash
+python scripts/build_hf_model.py               # -> dist/hf_model/ (4 files, no secrets)
+hf upload <hf-username>/pancreasignal-urine-logreg dist/hf_model . --repo-type model
+```
 
 ## Data
 

@@ -8,6 +8,8 @@ app_file: index.html
 pinned: false
 license: other
 short_description: Urine-biomarker PDAC triage agent, runs in your browser
+models:
+  - trungvu0307/pancreasignal-urine-logreg
 ---
 
 # PancreaSignal: web demo (runs in your browser)
@@ -18,6 +20,8 @@ evidence -> human review -> bilingual (English / Vietnamese) report.
 
 Code, the full evaluation (leave-one-hospital-out AUROC with confidence intervals, calibration,
 comparison with plasma CA19-9) and its limitations: https://github.com/vutr2/pancreasignal
+
+The model itself, with its model card: https://huggingface.co/trungvu0307/pancreasignal-urine-logreg
 
 > **Research prototype. Not a medical device. Synthetic cases only: do not enter real patient data.**
 
